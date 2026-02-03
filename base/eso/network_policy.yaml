@@ -1,0 +1,25 @@
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: bitwarden-sdk-security
+  namespace: external-secrets
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: bitwarden-sdk-server
+  ingress:
+    # 1. Access for the Operator only
+    - fromEndpoints:
+        - matchLabels:
+            app.kubernetes.io/name: external-secrets
+      toPorts:
+        - ports:
+            - port: "9998"
+              protocol: TCP
+
+    - fromCIDRSet:
+        - cidr: "169.254.0.0/16"
+      toPorts:
+        - ports:
+            - port: "9998"
+              protocol: TCP
