@@ -1,0 +1,40 @@
+grafana:
+  ingress:
+    enabled: false
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  persistence:
+    enabled: true
+    storageClassName: "longhorn-wdblack"
+    accessModes:
+      - ReadWriteOnce
+    size: 5Gi
+    finalizers:
+      - kubernetes.io/pvc-protection
+
+prometheus:
+  prometheusSpec:
+    retention: 10d
+    storageSpec:
+      volumeClaimTemplate:
+       spec:
+         storageClassName: longhorn-wdblack
+         accessModes: ["ReadWriteOnce"]
+         resources:
+           requests:
+             storage: 25Gi
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 2
+        memory: 3Gi
+
+alertmanager:
+  enabled: false
