@@ -1,0 +1,37 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: pg-cluster
+spec:
+  instances: 3
+  managed:
+    roles:
+      - name: risingwave
+        ensure: present
+        comment: role used for risingwave
+        login: true
+        superuser: false
+        connectionLimit: -1
+        inherit: true
+        passwordSecret:
+          name: rw-metastore-secret
+      - name: vikunja
+        ensure: present
+        comment: role used for vikunja
+        login: true
+        superuser: false
+        connectionLimit: -1
+        inherit: true
+        passwordSecret:
+          name: vikunja
+
+  storage:
+    size: 10Gi
+    storageClass: longhorn-wdblack
+  resources:
+    limits:
+      cpu: '1'
+      memory: 1000Mi
+    requests:
+      cpu: 100m
+      memory: 200Mi

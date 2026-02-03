@@ -1,0 +1,12 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: risingwave
+spec:
+  name: risingwave
+  owner: risingwave
+  cluster:
+    name: pg-cluster
+  extensions:
+  - name: bloom
+    ensure: present
