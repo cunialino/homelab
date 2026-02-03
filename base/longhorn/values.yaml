@@ -1,0 +1,6 @@
+preUpgradeChecker:
+  jobEnabled: false
+defaultSettings:
+  createDefaultDiskLabeledNodes: true
+  defaultDataPath: /var/lib/longhorn
+  backupTarget: "s3://your-bucket@region/" 
