@@ -1,0 +1,85 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vikunja-config
+data:
+  VIKUNJA_SERVICE_FRONTENDURL: "https://vikunja.tail2f38ea.ts.net"
+  VIKUNJA_SERVICE_PUBLICURL: "https://vikunja.tail2f38ea.ts.net"
+  VIKUNJA_DATABASE_TYPE: "postgres"
+  VIKUNJA_DATABASE_HOST: "pg-cluster-rw.cnpg-system.svc.cluster.local"
+  VIKUNJA_DATABASE_DATABASE: "vikunja"
+  VIKUNJA_CORS_ENABLE: "true"
+  VIKUNJA_CORS_ORIGINS: "https://vikunja.tail2f38ea.ts.net"
+  VIKUNJA_SERVICE_ENABLEREGISTRATION: "false"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vikunja-files
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn-wdblack
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vikunja
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vikunja
+  template:
+    metadata:
+      labels:
+        app: vikunja
+    spec:
+      securityContext:
+        fsGroup: 1000 
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+      - name: vikunja
+        image: docker.io/vikunja/vikunja:latest
+        ports:
+        - containerPort: 3456
+          name: http
+        env:
+        - name: VIKUNJA_DATABASE_USER
+          valueFrom:
+            secretKeyRef:
+              name: vikunja
+              key: username
+        - name: VIKUNJA_DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: vikunja
+              key: password
+        - name: HOME
+          value: /tmp
+        envFrom:
+        - configMapRef:
+            name: vikunja-config
+        volumeMounts:
+        - name: files
+          mountPath: /app/vikunja/files
+        - name: cache
+          mountPath: /.cache
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: files
+        persistentVolumeClaim:
+          claimName: vikunja-files
+      - name: cache
+        emptyDir: {}
