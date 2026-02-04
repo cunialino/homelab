@@ -4,3 +4,13 @@ defaultSettings:
   createDefaultDiskLabeledNodes: true
   defaultDataPath: /var/lib/longhorn
   backupTarget: "s3://your-bucket@region/" 
+
+longhornui:
+  replicas: 1
+
+longhornManager:
+  tolerations:
+    - key: "opi"
+      operator: "Equal"
+      value: "ok"
+      effect: "NoSchedule"
