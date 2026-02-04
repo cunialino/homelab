@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nats
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://nats-io.github.io/k8s/helm/charts/
+      chart: nack
+      targetRevision: 0.33.0
+      helm:
+        releaseName: nack
+        valueFiles: 
+          - $my-repo/base/nats/controller_values.yaml
+
+    - repoURL: https://nats-io.github.io/k8s/helm/charts/
+      chart: nats
+      targetRevision: 2.12.4
+      helm:
+        releaseName: nats-cluster
+        valueFiles: 
+          - $my-repo/base/nats/cluster_values.yaml
+
+    - repoURL: https://github.com/cunialino/homelab.git
+      path: base/nats
+      targetRevision: main
+      ref: my-repo
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: nats
+  
+  syncPolicy:
+    automated:
+      enabled: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

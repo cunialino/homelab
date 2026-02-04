@@ -1,0 +1,14 @@
+jetstream:
+  nats:
+    url: "nats://nats-cluster.nats.svc.cluster.local:4222"
+  additionalArgs:
+    - "--control-loop"
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+

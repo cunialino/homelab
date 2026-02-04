@@ -1,0 +1,53 @@
+config:
+  cluster:
+    enabled: true
+    replicas: 3
+  jetstream:
+    enabled: true
+    memoryStore:
+      enabled: true
+      maxSize: 1Gi
+    fileStore:
+      enabled: true
+      dir: /data
+      pvc:
+        enabled: true
+        size: 5Gi
+        storageClassName: longhorn-wdblack
+
+podTemplate:
+  merge:
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: nats-group
+                    operator: In
+                    values:
+                      - core-ha
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app.kubernetes.io/name
+                      operator: In
+                      values:
+                        - nats
+                topologyKey: "kubernetes.io/hostname"
+
+container:
+  env:
+    GOMEMLIMIT: 1GiB
+  merge:
+    resources:
+      requests:
+        cpu: "200m"
+        memory: "1500Mi"
+      limits:
+        cpu: "2000m"
+        memory: "3Gi"
