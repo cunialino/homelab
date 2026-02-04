@@ -4,6 +4,13 @@ metadata:
   name: pg-cluster
 spec:
   instances: 3
+  bootstrap:
+    recovery:
+      volumeSnapshots:
+        storage:
+          name: "pg-recovery-pvc"
+          kind: PersistentVolumeClaim
+          apiGroup: ""
   managed:
     roles:
       - name: risingwave
