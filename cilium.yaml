@@ -1,0 +1,57 @@
+k8sServiceHost: 192.168.0.2
+k8sServicePort: 6443
+mtu: 1450
+ipam:
+  mode: kubernetes
+
+enableIPv4Masquerade: true
+
+enableMasqueradeRouteSource: false
+
+ipv4NativeRoutingCIDR: 10.42.0.0/16
+
+kubeProxyReplacement: true
+
+rollOutCiliumPods: true
+
+envoy:
+  rollOutPods: true
+
+localRedirectPolicies:
+  enabled: true
+
+bpf:
+  masquerade: true
+
+devices: "eth+ enp+ eno+ end+ wlp+"
+
+endpointRoutes:
+  enabled: true
+
+hostServices:
+  enabled: true
+  protocols:
+    - tcp
+    - udp
+
+externalIPs:
+  enabled: true
+
+nodePort:
+  enabled: true
+
+hubble:
+  enabled: true
+  metrics:
+    enabled:
+      - dns
+      - drop
+      - tcp
+      - flow
+      - icmp
+  relay:
+    enabled: true
+  ui:
+    enabled: true
+    service:
+      type: ClusterIP # Change to LoadBalancer or NodePort if you want direct access
