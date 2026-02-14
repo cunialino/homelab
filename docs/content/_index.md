@@ -7,7 +7,7 @@ section_order = ["hero", "features"]
 
 [extra.hero]
 title = "Welcome to my homelab!"
-description = "A bare metal k3s cluster, where I can run projects, test new tech and break stuff so that I can learn how to fix them"
+description = "A bare metal k3s cluster for running projects, testing new technologies, and experimenting safely with self-hosted solutions"
 badge = "K8s • GitOps • Self Hosting"
 image = "images/landing.png"
 cta_buttons = [

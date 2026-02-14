@@ -1,6 +1,6 @@
 +++
 title = "Introduction"
-description = "Introduction of Homelab"
+description = "Welcome to my homelab documentation - a guide to my self-hosted Kubernetes environment and technical experiments"
 weight = 1
 sort_by = "weight"
 
