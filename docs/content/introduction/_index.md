@@ -7,46 +7,82 @@ sort_by = "weight"
 [extra]
 +++
 
-My homelab is a bare metal k3s cluster running on my mini-pc and some spare
-hardware I happened to have.
+My homelab is a bare metal k3s cluster running on a mix of dedicated and spare hardware. This documentation covers the architecture, configuration, and operational practices I use to maintain this environment.
+
+## What is This?
+
+This homelab serves as:
+- A platform for running personal projects and services
+- A testing ground for new technologies and DevOps practices
+- A learning environment for Kubernetes, networking, and infrastructure automation
+- A reliable self-hosted alternative to cloud services
 
 ## Hardware
 
-Currently everything runs on the following hardware:
+The cluster runs on 4 heterogeneous nodes:
 
-- AOOSTAR gem 12:
+### AOOSTAR Gem 12 (Primary Node)
+- **RAM**: 64GB
+- **CPU**: [AMD Ryzen 7 8845HS](https://www.amd.com/en/products/processors/laptop/ryzen/8000-series/amd-ryzen-7-8845hs.html)
+- **Storage**: 
+  - 1 TB Samsung EVO SSD
+  - 2 TB WD Black SSD
 
-    - RAM: 64GB
-    - CPU: [amd ryzen 7 8845hs](https://www.amd.com/en/products/processors/laptop/ryzen/8000-series/amd-ryzen-7-8845hs.html)
-    - disks:
-        - 1 TB SSD Samsung EVO
-        - 2 TB SSD wd black
+### Orange Pi Zero 3 (ARM Node)
+- **RAM**: 2GB
+- **CPU**: Allwinner H618 (ARM64)
+- **Role**: Lightweight workloads, testing ARM compatibility
 
-- orange pi zero 3:
-    
-    - RAM: 2GB
-    - CPU: Allwinner H618
+### ASUS Zenbook 20215 (Laptop Node)
+- **RAM**: 8GB
+- **CPU**: Intel i7
+- **Role**: General compute, development workloads
 
-- asus zenbook 20215:
+### HP EliteDesk G2 (Mini PC)
+- **RAM**: 16GB
+- **CPU**: Intel i5
+- **Role**: General compute, services
 
-    - RAM: 8GB
-    - CPU: intel i7
+## Software Stack
 
-- hp elite desk G2:
-    
-    - RAM: 16GB
-    - CPU: intel 15
+### Operating System
+All nodes run [NixOS](https://nixos.org/), providing:
+- Immutable infrastructure with reproducible builds
+- Declarative configuration management
+- Atomic upgrades and rollbacks
+- Consistent environment across heterogeneous hardware
 
+The NixOS configurations are maintained in a separate [dotfiles repository](https://github.com/cunialino/dotfiles).
 
-## Software
+### Kubernetes Distribution
+[k3s](https://k3s.io/) - Lightweight Kubernetes distribution ideal for resource-constrained environments and edge deployments.
 
-All the nodes run on nixos, which makes it much easier to keep the aligned.
-Dotfiles are available [here](https://github.com/cunialino/dotfiles)
+### Core Components
 
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **CNI** | [Cilium](networking/cni) | eBPF-based networking and security |
+| **Storage** | [Longhorn](storage/longhorn) | Distributed block storage |
+| **GitOps** | [ArgoCD](cicd) | Declarative continuous delivery |
+| **Monitoring** | [Prometheus/Grafana](monitoring) | Metrics and visualization |
+| **Secrets** | [External Secrets Operator](utils/eso) | Secret management with Bitwarden |
 
-#### Disclaimer: vibe-documenting
+## Documentation Approach
 
-Most of the docs in this site are generated with the gemini-cli agent and reviewed by myself.
+> **Disclaimer**: Most of this documentation is generated with AI assistance (Gemini CLI) and reviewed for accuracy.
+> 
+> I focus primarily on coding and infrastructure automation, so documentation is maintained pragmatically to support those activities.
 
-I spend most of my time coding, which is my passion and hobby, hence I try
-to cut some corners on other things.
+## What's Next?
+
+- **[Cluster Architecture](/introduction/cluster-architecture)** - Visual overview of how components interact
+- **[Security Model](/introduction/security)** - Security practices and network policies
+- **[Getting Started](/getting-started)** - Navigate the documentation
+
+## Quick Stats
+
+- **Nodes**: 4 (mixed architecture: x86_64 + ARM64)
+- **Total RAM**: ~90GB
+- **Total Storage**: Mixed SSDs across nodes
+- **Uptime Target**: 24/7 (within homelab constraints)
+- **Deployment Method**: GitOps via ArgoCD

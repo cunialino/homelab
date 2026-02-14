@@ -14,7 +14,24 @@ things I set up is the CI/CD pipeline.
 ArgoCD is the first step to create a reproducible environment and it helps
 me manage deployments on Kubernetes effectively.
 
-I chose the "app of apps" pattern to manage my applications. This means I only needed to bootstrap a single root application, and all other applications are then automatically synchronized by ArgoCD. You can find the root application definition at [bootstrap/root-app.yaml](https://github.com/cunialino/homelab/tree/main/bootstrap/root-app.yaml). Individual application definitions are located in the [apps/](https://github.com/cunialino/homelab/tree/main/apps/) directory.
+I chose the "app of apps" pattern to manage my applications. This means I only needed to bootstrap a single root application, and all other applications are then automatically synchronized by ArgoCD.
+
+## Bootstrap Configuration
+
+The root application that bootstraps the entire GitOps workflow is defined in [bootstrap/root-app.yaml](https://github.com/cunialino/homelab/tree/main/bootstrap/root-app.yaml). Individual application definitions are located in the [apps/](https://github.com/cunialino/homelab/tree/main/apps/) directory.
+
+### Key Configuration Elements
+
+The root application configuration includes:
+
+- **repoURL**: Points to the GitHub repository containing all application manifests
+- **path**: The `apps/` directory contains all ArgoCD Application resources
+- **targetRevision**: Tracks the HEAD of the repository (main branch)
+- **syncPolicy.automated.enabled**: Automatically syncs changes from Git
+- **selfHeal**: Automatically corrects drift between Git and the cluster
+- **prune: false**: Does not automatically delete resources removed from Git
+
+> **Note**: View the complete root application configuration in [bootstrap/root-app.yaml](https://github.com/cunialino/homelab/tree/main/bootstrap/root-app.yaml) on GitHub.
 
 ## ARC Runners
 

@@ -1,22 +1,36 @@
-# Homelab
+# Homelab Infrastructure
 
-Homelab k3s infra.
+A Kubernetes cluster running on 4 NixOS nodes using k3s.
 
-My cluster is made of 4 nodes, configured with nixos (because why not).
+## Table of Contents
+- [Overview](#overview)
+- [Infrastructure](#infrastructure)
+- [Bootstrapping](#bootstrapping)
+- [Configuration Files](#configuration-files)
+- [Contributing](#contributing)
 
-The module I use is [this](https://github.com/cunialino/dotfiles/blob/main/sys_mods/k3s/default.nix)
+## Overview
 
-On top of this, I opted for the [cilium](https://cilium.io/) cni, with [these values](./cilium.yaml).
+A minimal k3s cluster with Cilium CNI configured on NixOS. The setup includes:
+- 4-node cluster
+- Custom nixos configuration module
+- Cilium CNI with specific values
 
+## Infrastructure
 
-## Bootstrapping the cluster
+### Nodes
+- 4 NixOS nodes
+- k3s cluster
+- Cilium CNI
 
-After running nixos-rebuild on all nodes and once all the nodes joined the cluster,
-we need to apply the cilium config with `cilium install --kubeconfig <path_to_k3s_kubeconfig>`.
+### Configuration Files
+- [Module](https://github.com/cunialino/dotfiles/blob/main/sys_mods/k3s/default.nix)
+- [Cilium Values](./cilium.yaml)
 
-Then, we bootstrap [argocd](https://argo-cd.readthedocs.io/en/stable/): 
-`kubectl apply --server-side --force-conflicts -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml`
+## Bootstrapping Process
 
-After this, I configured it via the webui (noob me, it was the first time using argocd), to connect to this repo via a PAT token.
-
-Last step before full automation was to apply the [root-app.yaml](./bootstrap/root-app.yaml)
+1. Run `nixos-rebuild` on all nodes
+2. Apply Cilium config: `cilium install --kubeconfig <path>`
+3. Deploy ArgoCD: `kubectl apply -f https://argo-cd.readthedocs.io/en/stable/manifests/install.yaml`
+4. Configure ArgoCD via web UI
+5. Apply bootstrap config: `kubectl apply -f ./bootstrap/root-app.yaml`
