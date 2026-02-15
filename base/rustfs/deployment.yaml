@@ -42,13 +42,13 @@ spec:
             - name: RUSTFS_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: rustfs-credentials
-                  key: USERNAME
+                  name: rustfs-secret
+                  key: username
             - name: RUSTFS_SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: rustfs-credentials
-                  key: PASSWORD
+                  name: rustfs-secret
+                  key: password
           volumeMounts:
             - name: data
               mountPath: /data
