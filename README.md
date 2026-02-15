@@ -19,6 +19,13 @@ A minimal k3s cluster with Cilium CNI configured on NixOS. The setup includes:
 - Cilium CNI with specific values
 
 ## Architecture
+```marmaid
+graph LR
+    switch[LAN Switch] --> node1[K8s Node 1]
+    switch[LAN Switch] --> node2[K8s Node 2]
+    switch[LAN Switch] --> node3[K8s Node 3]
+    switch[LAN Switch] --> node4[K8s Node 4]
+```
 
 ```mermaid
 flowchart TB
