@@ -10,4 +10,4 @@ spec:
   storageClassName: longhorn-wdblack-freq
   resources:
     requests:
-      storage: 150Gi
+      storage: 500Gi
