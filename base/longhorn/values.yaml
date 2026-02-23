@@ -4,13 +4,53 @@ defaultSettings:
   createDefaultDiskLabeledNodes: true
   defaultDataPath: /var/lib/longhorn
   backupTarget: "s3://your-bucket@region/" 
+  systemManagedCSIComponentsResourceLimits: |
+    {
+      "csi-attacher": {
+        "requests": {"cpu": "20m", "memory": "64Mi"},
+        "limits": {"cpu": "100m", "memory": "128Mi"}
+      },
+      "csi-provisioner": {
+        "requests": {"cpu": "40m", "memory": "128Mi"},
+        "limits": {"cpu": "200m", "memory": "256Mi"}
+      },
+      "csi-resizer": {
+        "requests": {"cpu": "20m", "memory": "64Mi"},
+        "limits": {"cpu": "100m", "memory": "128Mi"}
+      },
+      "csi-snapshotter": {
+        "requests": {"cpu": "20m", "memory": "64Mi"},
+        "limits": {"cpu": "100m", "memory": "128Mi"}
+      },
+      "longhorn-csi-plugin": {
+        "requests": {"cpu": "100m", "memory": "128Mi"},
+        "limits": {"cpu": "250m", "memory": "256Mi"}
+      },
+      "node-driver-registrar": {
+        "requests": {"cpu": "10m", "memory": "32Mi"},
+        "limits": {"cpu": "50m", "memory": "64Mi"}
+      },
+      "longhorn-liveness-probe": {
+        "requests": {"cpu": "10m", "memory": "32Mi"},
+        "limits": {"cpu": "50m", "memory": "64Mi"}
+      }
+    }
 
-longhornui:
+longhornUI:
   replicas: 1
 
 longhornManager:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+
   tolerations:
     - key: "opi"
       operator: "Equal"
       value: "ok"
       effect: "NoSchedule"
+

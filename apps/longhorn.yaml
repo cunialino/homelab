@@ -8,7 +8,7 @@ spec:
   sources:
     - repoURL: https://charts.longhorn.io/
       chart: longhorn
-      targetRevision: v1.10.0
+      targetRevision: v1.11.0
       helm:
         valueFiles:
           - $my-repo/base/longhorn/values.yaml
