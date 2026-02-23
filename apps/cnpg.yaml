@@ -9,6 +9,15 @@ spec:
     - repoURL: https://cloudnative-pg.github.io/charts
       chart: cloudnative-pg
       targetRevision: 0.26.0
+      helm:
+        values: |
+          resources:
+            limits:
+              cpu: 100m
+              memory: 200Mi
+            requests:
+              cpu: 100m
+              memory: 100Mi
 
     - repoURL: https://github.com/cunialino/homelab.git
       path: base/cnpg
