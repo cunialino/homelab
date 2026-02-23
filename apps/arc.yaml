@@ -11,6 +11,15 @@ spec:
     - chart: gha-runner-scale-set-controller
       repoURL: ghcr.io/actions/actions-runner-controller-charts
       targetRevision: 0.13.1
+      helm:
+        values: |
+          resources:
+            limits:
+              cpu: 100m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
     - chart: gha-runner-scale-set
       repoURL: ghcr.io/actions/actions-runner-controller-charts
       targetRevision: 0.13.1
@@ -27,8 +36,31 @@ spec:
               resources:
                 requests:
                   storage: 1Gi
+          listenerTemplate:
+            spec:
+              containers:
+                - name: listener
+                  resources:
+                    requests:
+                      cpu: "100m"
+                      memory: "128Mi"
+                    limits:
+                      cpu: "200m"
+                      memory: "256Mi"
+
           template:
             spec:
+              containers:
+                - name: runner
+                  image: ghcr.io/actions/actions-runner:latest
+                  command: ["/home/runner/run.sh"]
+                  resources:
+                    requests:
+                      cpu: "100m"
+                      memory: "128Mi"
+                    limits:
+                      cpu: "1000m"
+                      memory: "256Mi"
               securityContext:
                 fsGroup: 1001
           controllerServiceAccount:
