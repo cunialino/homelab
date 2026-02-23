@@ -15,6 +15,13 @@ kubeProxyReplacement: true
 rollOutCiliumPods: true
 
 envoy:
+  resources:
+    limits:
+      cpu: 4000m
+      memory: 4Gi
+    requests:
+      cpu: 100m
+      memory: 512Mi
   rollOutPods: true
 
 localRedirectPolicies:
@@ -51,7 +58,47 @@ hubble:
       - icmp
   relay:
     enabled: true
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 512Mi
   ui:
     enabled: true
+    frontend:
+      resources:
+        limits:
+          cpu: 1000m
+          memory: 1Gi
+        requests:
+          cpu: 100m
+          memory: 512Mi
+    backend:
+      resources:
+        limits:
+          cpu: 1000m
+          memory: 1Gi
+        requests:
+          cpu: 100m
+          memory: 512Mi
     service:
       type: ClusterIP # Change to LoadBalancer or NodePort if you want direct access
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 100m
+    memory: 512Mi
+
+operator:
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 100m
+      memory: 512Mi
