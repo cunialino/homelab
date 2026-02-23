@@ -28,14 +28,6 @@ spec:
           githubConfigUrl: "https://github.com/cunialino/homelab"
           githubConfigSecret: arc-runner-auth
           runnerScaleSetName: "homelab-runner"
-          containerMode:
-            type: "kubernetes"
-            kubernetesModeWorkVolumeClaim:
-              accessModes: ["ReadWriteOnce"]
-              storageClassName: "longhorn" 
-              resources:
-                requests:
-                  storage: 1Gi
           listenerTemplate:
             spec:
               containers:
