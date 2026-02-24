@@ -36,6 +36,9 @@ defaultSettings:
       }
     }
 
+persistence:
+  defaultClassReplicaCount: 1
+
 longhornUI:
   replicas: 1
 
