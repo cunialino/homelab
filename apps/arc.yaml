@@ -29,7 +29,13 @@ spec:
           githubConfigSecret: arc-runner-auth
           runnerScaleSetName: "homelab-runner"
           containerMode:
-            type: "kubernetes-novolume"
+            type: "kubernetes"
+            kubernetesModeWorkVolumeClaim:
+              accessModes: ["ReadWriteOnce"]
+              storageClassName: "longhorn" 
+              resources:
+                requests:
+                  storage: 1Gi
           listenerTemplate:
             spec:
               containers:
