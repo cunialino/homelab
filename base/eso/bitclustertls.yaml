@@ -1,0 +1,15 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: bitwarden-ca
+  namespace: external-secrets
+spec:
+  isCA: true
+  commonName: bitwarden-ca
+  dnsNames:
+    - bitwarden-sdk-server.external-secrets.svc.cluster.local
+  secretName: bitwarden-tls-certs
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
