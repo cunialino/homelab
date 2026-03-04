@@ -13,6 +13,8 @@ spec:
     server: 'https://kubernetes.default.svc'
     namespace: vikunja
   syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
     automated:
       enabled: false
       selfHeal: true
