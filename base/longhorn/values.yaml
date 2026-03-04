@@ -38,6 +38,7 @@ defaultSettings:
 
 persistence:
   defaultClassReplicaCount: 1
+  defaultFsType: xfs
 
 longhornUI:
   replicas: 1

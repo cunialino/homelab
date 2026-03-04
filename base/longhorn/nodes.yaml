@@ -1,0 +1,29 @@
+apiVersion: longhorn.io/v1beta2
+kind: Node
+metadata:
+  name: elcungem
+  namespace: longhorn-system
+spec:
+  allowScheduling: true
+  disks:
+    wd_black_gem:
+      path: /second_disk
+      allowScheduling: true
+      storageReserved: 0
+      tags:
+        - wdblack
+---
+apiVersion: longhorn.io/v1beta2
+kind: Node
+metadata:
+  name: elcunhp1
+  namespace: longhorn-system
+spec:
+  allowScheduling: true
+  disks:
+    wd_black_hp1:
+      path: /second_disk
+      allowScheduling: true
+      storageReserved: 0
+      tags:
+        - wdblack
