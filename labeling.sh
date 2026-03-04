@@ -15,16 +15,6 @@ kubectl label node elcunhp1 nats-group=core-ha --overwrite
 
 
 
-# Need to change reserved storage on ui, does not work from here
-kubectl annotate node elcungem \
-  node.longhorn.io/default-disks-config='[{"path":"/second_disk","allowScheduling":false,"storageReserved":0,"name":"wd_black_gem","tags":["wd_black"]}]' \
-  --overwrite
-
-kubectl annotate node elcunhp1 \
-  node.longhorn.io/default-disks-config='[{"path":"/second_disk","allowScheduling":false,"storageReserved":0,"name":"wd_black_hp1","tags":["wd_black"]}]' \
-  --overwrite
-
-
 kubectl label node elcungem streaming=true --overwrite
 kubectl label node elcunal streaming=true --overwrite
 
