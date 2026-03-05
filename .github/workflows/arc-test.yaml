@@ -1,8 +1,8 @@
 name: ARC Test
 on:
   push:
-    branches:
-      - main
+    tags:        
+      - '*'
 
 permissions:
   contents: read
