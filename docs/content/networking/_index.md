@@ -15,5 +15,7 @@ reasons.
 
 In my homelab, I leverage [Cilium](https://cilium.io/) as my Container Network Interface (CNI) for high-performance and secure internal cluster communication. For external access and secure remote management, I utilize [Tailscale](https://tailscale.com/) to create a private network across my devices.
 
+For multi-node k3s cluster high availability, I use [kube-vip](/networking/kube_vip/) to provide load balancing for the control plane and service traffic.
+
 I do not host publicly available sites, I am able to access my own services
 with a VPN.
