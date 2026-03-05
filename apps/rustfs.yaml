@@ -13,6 +13,8 @@ spec:
     server: 'https://kubernetes.default.svc'
     namespace: rustfs
   syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
     automated:
       enabled: false
       selfHeal: true
