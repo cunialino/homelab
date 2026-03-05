@@ -34,7 +34,7 @@ spec:
         fsGroup: 1000
 
       containers:
-        - image: rustfs/rustfs:latest
+        - image: rustfs/rustfs:1.0.0-alpha.85
           name: rustfs
           args:
             - "/data"
@@ -44,6 +44,10 @@ spec:
                 secretKeyRef:
                   name: rustfs-secret
                   key: username
+            - name: RUSTFS_OBS_LOG_DIRECTORY
+              value: ""
+            - name: RUSTFS_OBS_LOGGER_LEVEL
+              value: "info"
             - name: RUSTFS_SECRET_KEY
               valueFrom:
                 secretKeyRef:
@@ -52,8 +56,12 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+            - name: logs
+              mountPath: /logs
 
       volumes:
         - name: data
           persistentVolumeClaim:
             claimName: rustfs-pvc
+        - name: logs
+          emptyDir: {}
