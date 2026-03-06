@@ -13,6 +13,34 @@ spec:
       values: |
         kind: CronJob
         schedule: "*/15 * * * *"
+        deschedulerPolicy:
+          profiles:
+            - name: AffinityAndBalance
+              pluginConfig:
+                - name: DefaultEvictor
+                  args:
+                    ignorePvcPods: true
+                    evictLocalStoragePods: false
+                - name: RemovePodsViolatingInterPodAntiAffinity
+                  args: {}
+                - name: RemovePodsViolatingNodeAffinity
+                  args:
+                    nodeAffinityType:
+                      - requiredDuringSchedulingIgnoredDuringExecution
+                - name: LowNodeUtilization
+                  args:
+                    thresholds:
+                      pods: 20
+                    targetThresholds:
+                      pods: 50
+              plugins:
+                balance:
+                  enabled:
+                    - LowNodeUtilization
+                deschedule:
+                  enabled:
+                    - RemovePodsViolatingInterPodAntiAffinity
+                    - RemovePodsViolatingNodeAffinity
   destination:
     server: 'https://kubernetes.default.svc'
     namespace: kube-system
