@@ -1,52 +1,45 @@
 +++
 title = "CNI"
-description = "Container networking with Cilium and eBPF"
+description = "Container networking with flannel and kube-router"
 weight = 1
 sort_by = "weight"
 
 [extra]
 +++
 
-[Cilium](https://cilium.io/) serves as my Container Network Interface (CNI) plugin for Kubernetes.
-I chose Cilium primarily for its high-performance networking capabilities powered by eBPF,
-along with robust security features essential for maintaining a secure and efficient homelab environment.
+My Kubernetes cluster uses the k3s default CNI stack: [flannel](https://github.com/flannel-io/flannel) 
+for pod networking and [kube-router](https://www.kube-router.io/) as a kube-proxy replacement.
+This combination provides reliable, straightforward networking that works well across heterogeneous hardware in my homelab environment.
 
-## Why I installed it
+## Why I use it
 
-Traditional CNI solutions often rely on iptables for network policies, 
-which can become a bottleneck at scale. Cilium leverages eBPF to provide:
+Flannel provides a simple, reliable overlay network for pod communication using VXLAN or host-gateway modes.
+Kube-router provides network policies enforcemnt.
+Together they offer:
 
-- **High-performance networking**: Bypasses the kernel networking stack bottlenecks by using eBPF programs directly in the kernel
-- **Advanced network policies**: Fine-grained control over inter-service communication with improved performance over iptables
-- **Observability**: Built-in Hubble observability for monitoring, troubleshooting, and visualizing network traffic
-- **Load balancing**: L4 load balancing with eBPF, offering better performance and scalability
+- **Simplicity**: Minimal configuration, works out of the box with k3s
+- **Stability**: Proven solution that handles my mixed hardware reliably
+- **Low overhead**: No eBPF complexity, standard Linux networking
+- **Adequate performance**: Sufficient for homelab workloads without the tuning requirements of more advanced options
 
-## How I installed it
+## How I use it
 
-Cilium is configured via [cilium.yaml](https://github.com/cunialino/homelab/tree/main/cilium.yaml) in my homelab repository. The configuration enables:
-
-- **BPF mode**: `kubeProxyReplacement: true` replaces kube-proxy with eBPF-based load balancing
-- **Direct routing**: Auto-configured routes between nodes for efficient pod-to-pod communication
-- **BPF masquerade disabled**: Set to `false` so Cilium doesn't manage traffic on wifi interfaces used for daily internet activities
-- **Hubble observability**: Full stack enabled with metrics for DNS, drops, TCP flows, and ICMP
-- **IPv4 CIDR**: Pod network uses `10.42.0.0/16` with native routing
+No additional configuration is needed—these components come pre-configured with k3s.
+The pod network uses `10.42.0.0/16` with VXLAN overlay for cross-node communication.
 
 ## What it's used for
 
-### 1. Inter-service communication control
+Flannel handles pod-to-pod networking across nodes, while kube-router manages service discovery and load balancing via BGP.
+This setup ensures reliable connectivity between workloads without the complexity of advanced CNI features.
 
-Cilium enforces network policies at the kernel level using eBPF, allowing me to define which services can communicate with each other. This provides security without sacrificing performance.
+### Previous attempt: Cilium
 
-### 2. Network visibility and troubleshooting
-
-Hubble provides real-time visibility into cluster networking:
-- View traffic flows between pods and services
-- Detect dropped packets and understand why
-- Monitor DNS queries across the cluster
-- Visualize service dependencies
+I previously tried Cilium for its eBPF-powered networking and enhanced observability.
+However, it caused older nodes in my cluster to freeze intermittently, likely due to eBPF compatibility issues or resource constraints on older hardware.
+I switched back to k3s defaults for stability across all nodes.
 
 ## References
 
-- [Cilium official documentation](https://cilium.io/)
-- [cilium.yaml configuration](https://github.com/cunialino/homelab/tree/main/cilium.yaml)
-- [Hubble observability](https://cilium.io/learn/getting-to-know-hubble/)
+- [k3s networking documentation](https://docs.k3s.io/networking)
+- [flannel](https://github.com/flannel-io/flannel)
+- [kube-router](https://www.kube-router.io/)
