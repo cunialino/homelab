@@ -55,16 +55,25 @@ Dotfiles are available [here](https://github.com/cunialino/dotfiles)
 flowchart TB
     subgraph k3s_cluster["K3S Cluster"]
         direction TB
-        mini_pc["AOOSTAR GEM 12<br/>Ryzen 7 8845HS<br/>64GB RAM"] -->|etcd| orange_pi["Orange Pi Zero 3<br/>H618<br/>2GB RAM"]
         
-        mini_pc --> zenbook["ASUS Zenbook 2025<br/>i7<br/>8GB RAM"]
-        mini_pc --> hp_desk["HP Elite Desk G2<br/>i5<br/>16GB RAM"]
+        switch[NETWORK SWITCH<br/>Ethernet]
+        
+        elcungem["elcungem<br/>AOOSTAR GEM 12<br/>Ryzen 7 8845HS<br/>64GB RAM<br/>2TB SSDs + Longhorn"]
+        orange_pi["orange_pi<br/>Orange Pi Zero 3<br/>H618<br/>2GB RAM"]
+        zenbook["zenbook<br/>ASUS Zenbook 2025<br/>i7<br/>8GB RAM"]
+        elcunhp1["elcunhp1<br/>HP Elite Desk G2<br/>i5<br/>16GB RAM<br/>2TB SSDs + Longhorn"]
+        
+        switch --> elcungem
+        switch --> orange_pi
+        switch --> zenbook
+        switch --> elcunhp1
     end
     
-    style mini_pc fill:#f9f,stroke:#333
-    style orange_pi fill:#bbf,stroke:#333
-    style zenbook fill:#f9f,stroke:#333
-    style hp_desk fill:#bbf,stroke:#333
+    style switch fill:#888,stroke:#333
+    style elcungem fill:#bbf,stroke:#333
+    style elcunhp1 fill:#bbf,stroke:#333
+    style orange_pi fill:#ccc,stroke:#333
+    style zenbook fill:#ccc,stroke:#333
 {% end %}
 
 #### A Note on Documentation
