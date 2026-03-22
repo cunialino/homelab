@@ -24,6 +24,7 @@ grafana:
 
 prometheus:
   prometheusSpec:
+    enableRemoteWriteReceiver: true
     retention: 10d
     storageSpec:
       volumeClaimTemplate:
@@ -42,4 +43,10 @@ prometheus:
         memory: 3Gi
 
 alertmanager:
+  enabled: false
+
+nodeExporter:
+  enabled: false
+  forceDeployDashboards: true
+prometheus-node-exporter:
   enabled: false
