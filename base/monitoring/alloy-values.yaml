@@ -20,24 +20,19 @@ alloy:
   configMap:
     content: |
       loki.source.journal "nixos" {
-        path       = "/run/log/journal"
-        labels     = {job = "journal"}
-        forward_to = [loki.write.local.receiver]
+        path          = "/var/log/journal"
+        labels        = {job = "journal"}
+        forward_to    = [loki.write.local.receiver]
         relabel_rules = loki.relabel.journal.rules
       }
-
       loki.relabel "journal" {
         rule {
-          source_labels = ["__journal__SYSTEMD_UNIT"]
-          target_label  = "unit"
+          action = "labelmap"
+          regex  = "__journal__(.+)"
         }
         rule {
-          source_labels = ["__journal__HOSTNAME"]
-          target_label  = "hostname"
-        }
-        rule {
-          source_labels = ["__journal__TRANSPORT"]
-          target_label  = "transport"
+          regex  = "(hostname|transport|job|_systemd_unit|systemd_unit|unit)"
+          action = "labelkeep"
         }
         forward_to = []
       }
@@ -73,7 +68,6 @@ alloy:
         rootfs_path    = "/host/root"
         udev_data_path = "/host/root/run/udev/data"
       }
-
       prometheus.scrape "node" {
         targets    = prometheus.exporter.unix.node.targets
         forward_to = [prometheus.relabel.node.receiver]
@@ -100,7 +94,7 @@ controller:
     extra:
       - name: journal
         hostPath:
-          path: /run/log/journal
+          path: /var/log/journal
       - name: proc
         hostPath:
           path: /proc
