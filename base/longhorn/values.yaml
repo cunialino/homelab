@@ -1,6 +1,7 @@
 preUpgradeChecker:
   jobEnabled: false
 defaultSettings:
+  taintToleration: "opi=ok:NoSchedule"
   createDefaultDiskLabeledNodes: true
   defaultDataPath: /var/lib/longhorn
   backupTarget: "s3://your-bucket@region/" 
@@ -62,3 +63,8 @@ longhornManager:
       value: "ok"
       effect: "NoSchedule"
 
+longhornDriver:
+  tolerations:
+    - key: "opi"
+      operator: "Exists"
+      effect: "NoSchedule"
