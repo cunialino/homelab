@@ -19,7 +19,7 @@ spec:
               pluginConfig:
                 - name: DefaultEvictor
                   args:
-                    ignorePvcPods: true
+                    ignorePvcPods: false
                     evictLocalStoragePods: false
                 - name: RemovePodsViolatingInterPodAntiAffinity
                   args: {}
