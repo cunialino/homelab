@@ -5,15 +5,11 @@ metadata:
 spec:
   instances: 3
   affinity:
-    podAntiAffinity:
-      requiredDuringSchedulingIgnoredDuringExecution:
-        - labelSelector:
-            matchExpressions:
-              - key: cnpg.io/cluster
-                operator: In
-                values:
-                  - pg-cluster
-          topologyKey: "kubernetes.io/hostname"
+    tolerations:
+      - key: "opi"
+        operator: "Exists"
+        effect: "NoSchedule"
+
   topologySpreadConstraints:
     - maxSkew: 1
       topologyKey: "kubernetes.io/hostname"
@@ -21,6 +17,8 @@ spec:
       labelSelector:
         matchLabels:
           cnpg.io/cluster: pg-cluster
+
+
   managed:
     roles:
       - name: risingwave
