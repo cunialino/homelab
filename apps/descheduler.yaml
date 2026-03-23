@@ -33,10 +33,15 @@ spec:
                       pods: 20
                     targetThresholds:
                       pods: 50
+                - name: RemovePodsViolatingTopologySpreadConstraint
+                  args:
+                    constraints:
+                      - ScheduleAnyway
               plugins:
                 balance:
                   enabled:
                     - LowNodeUtilization
+                    - RemovePodsViolatingTopologySpreadConstraint
                 deschedule:
                   enabled:
                     - RemovePodsViolatingInterPodAntiAffinity
