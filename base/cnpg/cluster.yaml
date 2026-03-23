@@ -4,6 +4,23 @@ metadata:
   name: pg-cluster
 spec:
   instances: 3
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: cnpg.io/cluster
+                operator: In
+                values:
+                  - pg-cluster
+          topologyKey: "kubernetes.io/hostname"
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: "kubernetes.io/hostname"
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          cnpg.io/cluster: pg-cluster
   managed:
     roles:
       - name: risingwave
@@ -30,7 +47,7 @@ spec:
     storageClass: longhorn-wdblack
   resources:
     limits:
-      cpu: '1'
+      cpu: "1"
       memory: 1000Mi
     requests:
       cpu: 100m
