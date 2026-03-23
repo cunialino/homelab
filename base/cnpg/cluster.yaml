@@ -39,6 +39,15 @@ spec:
         inherit: true
         passwordSecret:
           name: vikunja
+      - name: lakekeeper
+        ensure: present
+        comment: role used for lakekeeper
+        login: true
+        superuser: false
+        connectionLimit: -1
+        inherit: true
+        passwordSecret:
+          name: lakekeeper-secret
 
   storage:
     size: 10Gi

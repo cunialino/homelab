@@ -1,0 +1,12 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: lakekeeper
+spec:
+  name: lakekeeper
+  owner: lakekeeper
+  cluster:
+    name: pg-cluster
+  extensions:
+  - name: bloom
+    ensure: present
