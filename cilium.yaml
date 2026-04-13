@@ -1,0 +1,82 @@
+k8sServiceHost: 192.168.0.100
+k8sServicePort: 6443
+
+devices: "e+ lxc+ cilium_+"
+
+ipv4NativeRoutingCIDR: 10.42.0.0/16
+autoDirectNodeRoutes: true
+kubeProxyReplacement: true
+ipam:
+  mode: kubernetes
+endpointRoutes:
+  enabled: true
+bpf:
+  masquerade: false
+
+rollOutCiliumPods: true
+
+envoy:
+  resources:
+    limits:
+      cpu: 4000m
+      memory: 4Gi
+    requests:
+      cpu: 100m
+      memory: 512Mi
+  rollOutPods: true
+
+hubble:
+  enabled: true
+  metrics:
+    enabled:
+      - dns
+      - drop
+      - tcp
+      - flow
+      - icmp
+  relay:
+    enabled: true
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 512Mi
+  ui:
+    enabled: true
+    frontend:
+      resources:
+        limits:
+          cpu: 1000m
+          memory: 1Gi
+        requests:
+          cpu: 100m
+          memory: 512Mi
+    backend:
+      resources:
+        limits:
+          cpu: 1000m
+          memory: 1Gi
+        requests:
+          cpu: 100m
+          memory: 512Mi
+    service:
+      type: ClusterIP
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 100m
+    memory: 512Mi
+
+operator:
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 100m
+      memory: 512Mi
