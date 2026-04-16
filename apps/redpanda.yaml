@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: redpanda
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: 'https://github.com/cunialino/homelab.git'
+      path: base/redpanda
+      targetRevision: main
+      ref: values
+    - repoURL: 'https://charts.redpanda.com/'
+      chart: redpanda
+      targetRevision: 26.1.2
+      helm:
+        valueFiles:
+          - $values/base/redpanda/values.yaml
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: redpanda
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

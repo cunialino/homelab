@@ -1,0 +1,16 @@
+external:
+  enabled: false
+tls:
+  enabled: true
+statefulset:
+  replicas: 3
+resources:
+  cpu:
+    cores: 1
+  memory:
+    container:
+      max: 2Gi
+storage:
+  persistentVolume:
+    size: 5Gi
+    storageClass: "longhorn-wdblack"
