@@ -43,7 +43,46 @@ prometheus:
         memory: 3Gi
 
 alertmanager:
-  enabled: false
+  config:
+    global:
+      resolve_timeout: 5m
+
+    receivers:
+      - name: "null"
+      - name: telegram
+        telegram_configs:
+          - bot_token_file: /etc/alertmanager/secrets/alertmanager-telegram/telegram-token
+            chat_id: 383720015
+            parse_mode: HTML
+            message: |
+              {{ if eq .Status "firing" }}🔴{{ else }}✅{{ end }} <b>{{ .GroupLabels.alertname }}</b>
+
+              {{ range .Alerts }}
+              <b>Pod:</b> {{ .Labels.namespace }}/{{ .Labels.pod }}
+              <b>Summary:</b> {{ .Annotations.summary }}
+              <b>Severity:</b> {{ .Labels.severity }}
+              <b>Since:</b> {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+              {{ end }}
+
+    route:
+      receiver: telegram
+      group_by: ['alertname', 'namespace']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      routes:
+        - receiver: "null"
+          matchers:
+            - alertname = "Watchdog"
+        - receiver: "null"
+          matchers:
+            - severity = "info"
+
+defaultRules:
+  rules:
+    kubeControllerManager: false
+    kubeProxy: false
+    kubeSchedulerAlerting: false
 
 nodeExporter:
   enabled: false
