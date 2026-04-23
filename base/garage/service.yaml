@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/v1.34.3/service.json
+apiVersion: v1
+kind: Service
+metadata:
+  name: garage-svc
+spec:
+  selector:
+    app: garage
+  ports:
+    - name: s3-api
+      protocol: TCP
+      port: 3900
+      targetPort: 3900
+    - name: rpc
+      protocol: TCP
+      port: 3901
+      targetPort: 3901
+    - name: admin
+      protocol: TCP
+      port: 3903
+      targetPort: 3903
