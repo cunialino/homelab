@@ -4,11 +4,6 @@ metadata:
   name: pg-cluster
 spec:
   instances: 3
-  affinity:
-    tolerations:
-      - key: "opi"
-        operator: "Exists"
-        effect: "NoSchedule"
 
   postgresql:
     parameters:
