@@ -12,6 +12,10 @@ data:
     rpc_bind_addr = "[::]:3901"
     # rpc_secret is injected via GARAGE_RPC_SECRET env var
 
+    [db_options]
+    fsync = false
+
+
     [s3_api]
     s3_region = "eu-lambronx-1"
     api_bind_addr = "[::]:3900"
