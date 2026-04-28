@@ -47,6 +47,11 @@ spec:
         fsGroup: 1000 
         runAsUser: 1000
         runAsGroup: 1000
+      tolerations:
+        - key: "opi"
+          operator: "Exists"
+          effect: "NoSchedule"
+          
       containers:
       - name: vikunja
         image: docker.io/vikunja/vikunja:latest
