@@ -1,0 +1,48 @@
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: seaweedfs-s3-config
+  namespace: seaweedfs
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: bitwarden-secretsmanager
+    kind: ClusterSecretStore
+  target:
+    name: seaweedfs-s3-config
+    creationPolicy: Owner
+    template:
+      data:
+        s3.json: |
+          {
+            "identities": [
+              {
+                "name": "admin",
+                "credentials": [{"accessKey": "{{ .admin_id }}", "secretKey": "{{ .admin_key}}"}],
+                "actions": ["Admin"]
+              },
+              {
+                "name": "risingwave",
+                "credentials": [{"accessKey": "{{ .rw_id }}", "secretKey": "{{ .rw_key}}"}],
+                "actions": [
+                  "Read:hummock001",
+                  "Write:hummock001",
+                  "List:hummock001",
+                  "Tagging:hummock001"
+                ]
+              }
+            ]
+          }
+  data:
+    - secretKey: admin_id
+      remoteRef: 
+        key: "d2137caa-3d44-45bf-97e3-b440014fd449"
+    - secretKey: admin_key
+      remoteRef:
+        key: "51385e60-7e7f-4d7f-9503-b440014ff639"
+    - secretKey: rw_id
+      remoteRef: 
+        key: "05c2c173-3de5-4727-80a5-b416016a3c73"
+    - secretKey: rw_key
+      remoteRef:
+        key: "01c16d85-1a29-4581-b417-b416016a58fa"

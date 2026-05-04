@@ -1,0 +1,55 @@
+apiVersion: seaweed.seaweedfs.com/v1
+kind: Seaweed
+metadata:
+  name: seaweed
+  namespace: seaweedfs
+spec:
+  image: chrislusf/seaweedfs:latest
+  master:
+    defaultReplication: "000"
+    replicas: 3
+    limits:
+      memory: "512Mi"
+      cpu: "250m"
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+
+  volume:
+    replicas: 1
+    maxVolumeCounts: 50
+    storageClassName: longhorn-wdblack
+    limits:
+      memory: "512Mi"
+      cpu: "250m"
+    requests:
+      storage: 100Gi
+      memory: "128Mi"
+      cpu: "100m"
+
+  filer:
+    replicas: 1
+    config: |
+      [leveldb2]
+      enabled = true
+      dir = "/data/filerdb"
+    s3:
+      enabled: true
+    iam: false
+    extraArgs: 
+      - "-s3.config=/root/.seaweedfs/s3.json"
+    volumes:
+      - name: s3-config
+        secret:
+          secretName: seaweedfs-s3-config
+    volumeMounts:
+      - name: s3-config
+        mountPath: /root/.seaweedfs/s3.json
+        subPath: s3.json
+        readOnly: true
+    limits:
+      memory: "512Mi"
+      cpu: "250m"
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
