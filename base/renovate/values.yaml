@@ -1,0 +1,76 @@
+cronjob:
+  schedule: "0 */6 * * *"  # every 6 hours — plenty for a homelab repo
+  successfulJobsHistory: 2
+  failedJobsHistory: 1
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 1Gi
+  requests:
+    cpu: 100m
+    memory: 512Mi
+
+renovate:
+  config: |
+    {
+      "platform": "github",
+      "repositories": ["cunialino/homelab"],
+      "onboarding": false,
+      "dependencyDashboard": true,
+      "dependencyDashboardApproval": true,
+      "requireConfig": "optional",
+      "prHourlyLimit": 5,
+      "labels": ["renovate"],
+      "semanticCommits": "enabled",
+      "commitMessageTopic": "{{depName}}",
+      "enabledManagers": [
+        "argocd",
+        "helm-values",
+        "kubernetes",
+        "docker-compose",
+        "dockerfile",
+        "custom.regex"
+      ],
+      "argocd": {
+        "managerFilePatterns": ["/^apps\\/.+\\.ya?ml$/"]
+      },
+      "helm-values": {
+        "managerFilePatterns": [
+          "/(^|/)values\\.ya?ml$/",
+          "/(^|/).+-values\\.ya?ml$/",
+          "/(^|/).+_values\\.ya?ml$/",
+          "/^cilium\\.yaml$/"
+        ]
+      },
+      "kubernetes": {
+        "managerFilePatterns": ["/^base\\/.+\\.ya?ml$/"]
+      },
+      "docker-compose": {
+        "enabled": true
+      },
+      "dockerfile": {
+        "enabled": true
+      },
+      "customManagers": [
+        {
+          "customType": "regex",
+          "description": "Update ARC runner image in inline Argo CD Helm values",
+          "managerFilePatterns": ["/^apps\\/arc\\.ya?ml$/"],
+          "matchStrings": [
+            "image:\\s+(?<depName>ghcr\\.io\\/actions\\/actions-runner):(?<currentValue>[^\\s]+)"
+          ],
+          "datasourceTemplate": "docker",
+          "versioningTemplate": "docker"
+        }
+      ]
+    }
+
+envFrom:
+  - secretRef:
+      name: renovate-gh-pat
+
+persistence:
+  cache:
+    enabled: true
+    size: 256Mi
