@@ -9,9 +9,6 @@ ipam:
   mode: kubernetes
 endpointRoutes:
   enabled: true
-bpf:
-  masquerade: false
-
 rollOutCiliumPods: true
 
 envoy:
@@ -65,8 +62,8 @@ hubble:
 
 resources:
   limits:
-    cpu: 200m
-    memory: 512Mi
+    cpu: 500m
+    memory: 1Gi
   requests:
     cpu: 100m
     memory: 256Mi
