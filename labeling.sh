@@ -19,14 +19,6 @@ kubectl label node elcungem streaming=true --overwrite
 kubectl label node elcunal streaming=true --overwrite
 
 
-kubectl label node elcungem internet=true --overwrite
-kubectl label node elcunhp1 internet=true --overwrite
-
 kubectl label node elcungem fast-eth=true --overwrite
 kubectl label node elcunhp1 fast-eth=true --overwrite
 kubectl label node opizero3 fast-eth=true --overwrite
-
-
-
-kubectl annotate node elcungem node.longhorn.io/default-node-tags='["storage","fast"]'
-kubectl annotate node elcunhp1 node.longhorn.io/default-node-tags='["fast"]'
