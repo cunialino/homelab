@@ -43,6 +43,10 @@ prometheus:
         memory: 3Gi
 
 alertmanager:
+  alertmanagerSpec:
+    secrets:
+      - alertmanager-telegram
+
   config:
     global:
       resolve_timeout: 5m
