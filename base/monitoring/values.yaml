@@ -80,6 +80,10 @@ alertmanager:
             - alertname = "Watchdog"
         - receiver: "null"
           matchers:
+            - alertname = "InfoInhibitor"
+
+        - receiver: "null"
+          matchers:
             - severity = "info"
 
 defaultRules:
