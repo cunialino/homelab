@@ -97,3 +97,37 @@ nodeExporter:
   forceDeployDashboards: true
 prometheus-node-exporter:
   enabled: false
+
+additionalPrometheusRulesMap:
+  custom-alerts:
+    groups:
+      - name: pod-failure-alerts
+        rules:
+          - alert: PodImagePullBackOff
+            expr: kube_pod_container_status_waiting_reason{reason="ImagePullBackOff"} == 1
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} cannot pull image"
+              description: "Container {{ $labels.container }} is stuck in ImagePullBackOff"
+
+          - alert: PodFrequentlyRestarting
+            expr: increase(kube_pod_container_status_restarts_total[1h]) > 5
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} restarting frequently"
+              description: "Pod has restarted {{ $value }} times in the last hour"
+
+      - name: pvc-alerts
+        rules:
+          - alert: PVCUsageWarning
+            expr: kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes > 0.8
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} at 80% capacity"
+              description: "PVC is {{ $value | humanizePercentage }} full"
