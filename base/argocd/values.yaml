@@ -1,0 +1,171 @@
+server:
+  ingress:
+    enabled: false
+  config:
+    url: https://argocd.tail2f38ea.ts.net
+  resources:
+    limits:
+      cpu: 1
+      memory: 512Mi
+    requests:
+      cpu: 256m
+      memory: 256Mi
+  extensions:
+    resources:
+      limits:
+        cpu: 256m
+        memory: 128Mi
+      requests:
+        cpu: 64m
+        memory: 64Mi
+
+controller:
+  replicas: 1
+  resources:
+    limits:
+      cpu: 1
+      memory: 1Gi
+    requests:
+      cpu: 256m
+      memory: 256Mi
+
+dex:
+  resources:
+    limits:
+      cpu: 512m
+      memory: 256Mi
+    requests:
+      cpu: 128m
+      memory: 128Mi
+  initImage:
+    resources:
+      limits:
+        cpu: 256m
+        memory: 64Mi
+      requests:
+        cpu: 64m
+        memory: 32Mi
+
+redis:
+  resources:
+    limits:
+      cpu: 512m
+      memory: 512Mi
+    requests:
+      cpu: 128m
+      memory: 128Mi
+  exporter:
+    resources:
+      limits:
+        cpu: 256m
+        memory: 128Mi
+      requests:
+        cpu: 64m
+        memory: 64Mi
+  secretInit:
+    resources:
+      limits:
+        cpu: 256m
+        memory: 64Mi
+      requests:
+        cpu: 64m
+        memory: 32Mi
+
+repoServer:
+  replicas: 1
+  resources:
+    limits:
+      cpu: 1
+      memory: 1Gi
+    requests:
+      cpu: 256m
+      memory: 256Mi
+  copyutil:
+    resources:
+      limits:
+        cpu: 256m
+        memory: 64Mi
+      requests:
+        cpu: 64m
+        memory: 32Mi
+
+applicationSet:
+  enabled: true
+  replicas: 1
+  resources:
+    limits:
+      cpu: 512m
+      memory: 256Mi
+    requests:
+      cpu: 128m
+      memory: 128Mi
+
+notifications:
+  enabled: false
+  resources:
+    limits:
+      cpu: 256m
+      memory: 128Mi
+    requests:
+      cpu: 64m
+      memory: 64Mi
+
+commitServer:
+  resources:
+    limits:
+      cpu: 256m
+      memory: 256Mi
+    requests:
+      cpu: 64m
+      memory: 64Mi
+
+extraObjects:
+  - apiVersion: external-secrets.io/v1
+    kind: ExternalSecret
+    metadata:
+      name: repo-homelab
+      namespace: argocd
+    spec:
+      refreshInterval: 1h
+      secretStoreRef:
+        name: bitwarden-secretsmanager
+        kind: ClusterSecretStore
+      target:
+        name: repo-homelab
+        creationPolicy: Owner
+        template:
+          metadata:
+            labels:
+              argocd.argoproj.io/secret-type: repository
+          data:
+            url: https://github.com/cunialino/homelab.git
+            username: cunialino
+            password: "{{ .password }}"
+            type: git
+      data:
+        - secretKey: password
+          remoteRef:
+            key: "dfe03bd7-1a95-4e33-a596-b4010165b4ea"
+
+  - apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: argocd-ingress
+      namespace: argocd
+      annotations:
+        tailscale.com/proxy-class: "tailscale-small"
+    spec:
+      ingressClassName: tailscale
+      rules:
+        - http:
+            paths:
+            - path: /
+              pathType: Prefix
+              backend:
+                service:
+                  name: argocd-server
+                  port:
+                    number: 443
+      tls:
+      - hosts:
+        - argocd
