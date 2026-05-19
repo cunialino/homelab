@@ -1,0 +1,35 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: cnpg-replication-alerts
+  namespace: cnpg-system
+spec:
+  groups:
+    - name: cnpg-replication
+      rules:
+        - alert: CNPGReplicationLagWarning
+          expr: cnpg_pg_replication_lag > 60
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "CNPG replica {{ $labels.pod }} lagging by {{ $value }}s"
+            description: "Replica is lagging behind primary by more than 60 seconds"
+
+        - alert: CNPGReplicationLagCritical
+          expr: cnpg_pg_replication_lag > 300
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "CNPG replica {{ $labels.pod }} lagging by {{ $value }}s"
+            description: "Replica is lagging behind primary by more than 5 minutes"
+
+        - alert: CNPGReplicaFailing
+          expr: cnpg_pg_replication_in_recovery == 1 and cnpg_pg_replication_is_wal_receiver_up == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "CNPG replica {{ $labels.pod }} failing to replicate"
+            description: "Replica is in recovery mode but WAL receiver is down - replication has stopped"
