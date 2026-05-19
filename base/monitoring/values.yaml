@@ -59,7 +59,7 @@ alertmanager:
             chat_id: 383720015
             parse_mode: HTML
             message: |
-              {{ if eq .Status "firing" }}🔴{{ else }}✅{{ end }} <b>{{ .GroupLabels.alertname }}</b>
+              {{ if eq .Status "firing" }}🔴 FIRING{{ else }}✅ RESOLVED{{ end }} <b>{{ .GroupLabels.alertname }}</b>
 
               {{ range .Alerts }}
               <b>Pod:</b> {{ .Labels.namespace }}/{{ .Labels.pod }}
