@@ -52,6 +52,13 @@ renovate:
       "dockerfile": {
         "enabled": true
       },
+      "packageRules": [
+        {
+          "matchManagers": ["argocd"],
+          "matchFileNames": ["apps/renovate.yaml"],
+          "enabled": false
+        }
+      ],
       "customManagers": [
         {
           "customType": "regex",
@@ -62,6 +69,16 @@ renovate:
           ],
           "datasourceTemplate": "docker",
           "versioningTemplate": "docker"
+        },
+        {
+          "customType": "regex",
+          "description": "Track Renovate's own OCI Helm chart version",
+          "managerFilePatterns": ["/^apps\\/renovate\\.ya?ml$/"],
+          "matchStrings": [
+            "repoURL:\\s*oci://(?<depName>[^\\s]+)\\s+chart:\\s+renovate\\s+targetRevision:\\s*(?<currentValue>[^\\s]+)"
+          ],
+          "datasourceTemplate": "docker",
+          "versioningTemplate": "semver"
         }
       ]
     }
