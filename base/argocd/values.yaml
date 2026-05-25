@@ -1,3 +1,10 @@
+configs:
+  cm:
+    resource.customizations.ignoreDifferences.external-secrets.io_ExternalSecret: |
+      jqPathExpressions:
+      - '.spec.data[]?.remoteRef.conversionStrategy'
+      - '.spec.data[]?.remoteRef.decodingStrategy'
+
 server:
   extraArgs:
     - --insecure
