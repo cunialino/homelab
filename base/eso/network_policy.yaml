@@ -1,25 +1,96 @@
 apiVersion: "cilium.io/v2"
 kind: CiliumNetworkPolicy
 metadata:
-  name: bitwarden-sdk-security
+  name: external-secrets
   namespace: external-secrets
-spec:
-  endpointSelector:
-    matchLabels:
-      app.kubernetes.io/name: bitwarden-sdk-server
-  ingress:
-    # 1. Access for the Operator only
-    - fromEndpoints:
-        - matchLabels:
-            app.kubernetes.io/name: external-secrets
-      toPorts:
-        - ports:
-            - port: "9998"
+specs:
+  - endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: external-secrets
+    egress:
+      - toEntities:
+          - host
+        toPorts:
+          - ports:
+            - port: "6443"
               protocol: TCP
 
-    - fromCIDRSet:
-        - cidr: "169.254.0.0/16"
-      toPorts:
-        - ports:
-            - port: "9998"
-              protocol: TCP
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: kube-dns
+        toPorts:
+          - ports:
+            - port: "53"
+              protocol: UDP
+
+  - endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: bitwarden-sdk-server
+    ingress:
+      - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: external-secrets
+              app.kubernetes.io/instance: external-secrets
+        toPorts:
+          - ports:
+              - port: "9998"
+                protocol: TCP
+    egress:
+      - toFQDNs:
+          - matchName: "vault.bitwarden.eu"
+        toPorts:
+          - ports:
+              - port: "443"
+                protocol: TCP
+
+  - endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: external-secrets
+        app.kubernetes.io/instance: external-secrets
+    egress:
+      - toEntities:
+          - kube-apiserver
+      - toEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: bitwarden-sdk-server
+              app.kubernetes.io/instance: external-secrets
+        toPorts:
+          - ports:
+              - port: "9998"
+                protocol: TCP
+
+  - endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: external-secrets-webhook
+        app.kubernetes.io/instance: external-secrets
+    ingress:
+      - fromEntities:
+          - kube-apiserver
+        toPorts:
+          - ports:
+              - port: "10250"
+                protocol: TCP
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8081"
+                protocol: TCP
+    egress:
+      - toEntities:
+          - kube-apiserver
+
+  - endpointSelector:
+      matchLabels:
+        app.kubernetes.io/name: external-secrets-cert-controller
+        app.kubernetes.io/instance: external-secrets
+    ingress:
+      - fromEntities:
+          - host
+        toPorts:
+          - ports:
+              - port: "8081"
+                protocol: TCP
+    egress:
+      - toEntities:
+          - kube-apiserver
