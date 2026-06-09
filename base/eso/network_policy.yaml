@@ -12,16 +12,15 @@ specs:
           - host
         toPorts:
           - ports:
-            - port: "6443"
-              protocol: TCP
-
+              - port: "6443"
+                protocol: TCP
       - toEndpoints:
           - matchLabels:
               app.kubernetes.io/name: kube-dns
         toPorts:
           - ports:
-            - port: "53"
-              protocol: UDP
+              - port: "53"
+                protocol: UDP
 
   - endpointSelector:
       matchLabels:
