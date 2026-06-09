@@ -47,6 +47,14 @@ specs:
               - port: "9998"
                 protocol: TCP
     egress:
+      - toEndpoints:
+          - matchLabels:
+              k8s-app: kube-dns
+              io.kubernetes.pod.namespace: kube-system
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
       - toFQDNs:
           - matchName: "vault.bitwarden.eu"
         toPorts:
