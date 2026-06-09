@@ -16,7 +16,8 @@ specs:
                 protocol: TCP
       - toEndpoints:
           - matchLabels:
-              app.kubernetes.io/name: kube-dns
+              k8s-app: kube-dns
+              io.kubernetes.pod.namespace: kube-system
         toPorts:
           - ports:
               - port: "53"
