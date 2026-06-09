@@ -22,17 +22,26 @@ specs:
       - toEndpoints:
           - matchLabels:
               app.kubernetes.io/name: bitwarden-sdk-server
-              app.kubernetes.io/instance: external-secrets
         toPorts:
           - ports:
               - port: "9998"
                 protocol: TCP
+
   - endpointSelector:
       matchLabels:
         app.kubernetes.io/name: bitwarden-sdk-server
     ingress:
       - fromEntities:
           - host
+        toPorts:
+          - ports:
+              - port: "9998"
+                protocol: TCP
+      - fromEndpoints:
+          - matchLabels:
+              app.kubernetes.io/name: external-secrets
+              app.kubernetes.io/instance: external-secrets
+              io.kubernetes.pod.namespace: external-secrets
         toPorts:
           - ports:
               - port: "9998"
