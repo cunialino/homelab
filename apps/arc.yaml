@@ -22,7 +22,7 @@ spec:
               memory: 128Mi
     - chart: gha-runner-scale-set
       repoURL: ghcr.io/actions/actions-runner-controller-charts
-      targetRevision: 0.14.1
+      targetRevision: 0.14.2
       helm:
         values: |
           githubConfigUrl: "https://github.com/cunialino/homelab"
