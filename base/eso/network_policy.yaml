@@ -19,6 +19,11 @@ specs:
           - ports:
               - port: "53"
                 protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
       - toEndpoints:
           - matchLabels:
               app.kubernetes.io/name: bitwarden-sdk-server
@@ -26,7 +31,14 @@ specs:
           - ports:
               - port: "9998"
                 protocol: TCP
-
+      - toServices:
+          - k8sService:
+              serviceName: bitwarden-sdk-server
+              namespace: external-secrets
+        toPorts:
+          - ports:
+              - port: "9998"
+                protocol: TCP
   - endpointSelector:
       matchLabels:
         app.kubernetes.io/name: bitwarden-sdk-server
@@ -66,7 +78,6 @@ specs:
           - ports:
               - port: "443"
                 protocol: TCP
-
   - endpointSelector:
       matchLabels:
         app.kubernetes.io/name: external-secrets-webhook
@@ -86,7 +97,19 @@ specs:
     egress:
       - toEntities:
           - kube-apiserver
-
+      - toEndpoints:
+          - matchLabels:
+              k8s-app: kube-dns
+              io.kubernetes.pod.namespace: kube-system
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
   - endpointSelector:
       matchLabels:
         app.kubernetes.io/name: external-secrets-cert-controller
@@ -100,3 +123,16 @@ specs:
     egress:
       - toEntities:
           - kube-apiserver
+      - toEndpoints:
+          - matchLabels:
+              k8s-app: kube-dns
+              io.kubernetes.pod.namespace: kube-system
+        toPorts:
+          - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+            rules:
+              dns:
+                - matchPattern: "*"
