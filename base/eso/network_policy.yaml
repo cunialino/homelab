@@ -55,6 +55,9 @@ specs:
           - ports:
               - port: "53"
                 protocol: UDP
+            rules:
+              dns:
+                - matchPattern: "*"
       - toFQDNs:
           - matchName: "vault.bitwarden.eu"
         toPorts:
