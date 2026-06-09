@@ -27,10 +27,8 @@ specs:
       matchLabels:
         app.kubernetes.io/name: bitwarden-sdk-server
     ingress:
-      - fromEndpoints:
-          - matchLabels:
-              app.kubernetes.io/name: external-secrets
-              app.kubernetes.io/instance: external-secrets
+      - fromEntities:
+          - host
         toPorts:
           - ports:
               - port: "9998"
