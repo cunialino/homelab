@@ -13,5 +13,5 @@ when running queries on it.
 
 ## Configuration
 
-I deploy RustFS via ArgoCD, with its configuration defined in 
-[base/rustfs/](https://github.com/cunialino/homelab/tree/main/base/garage/).
+I deploy Garage via ArgoCD, with its configuration defined in 
+[base/garage/](https://github.com/cunialino/homelab/tree/main/base/garage/).
