@@ -15,7 +15,7 @@ renovate:
   config: |
     {
       "platform": "github",
-      "repositories": ["cunialino/homelab"],
+      "repositories": ["cunialino/homelab", "cunialino/crypto-lakehouse"],
       "onboarding": false,
       "dependencyDashboard": true,
       "dependencyDashboardApproval": true,
@@ -33,7 +33,7 @@ renovate:
         "custom.regex"
       ],
       "argocd": {
-        "managerFilePatterns": ["/^apps\\/.+\\.ya?ml$/"]
+        "managerFilePatterns": ["/^(deploy\\/)?apps\\/.+\\.ya?ml$/"]
       },
       "helm-values": {
         "managerFilePatterns": [
@@ -44,7 +44,7 @@ renovate:
         ]
       },
       "kubernetes": {
-        "managerFilePatterns": ["/^base\\/.+\\.ya?ml$/"]
+        "managerFilePatterns": ["/^(deploy\\/)?base\\/.+\\.ya?ml$/"]
       },
       "docker-compose": {
         "enabled": true
@@ -57,6 +57,11 @@ renovate:
           "matchManagers": ["argocd"],
           "matchFileNames": ["apps/renovate.yaml"],
           "enabled": false
+        },
+        {
+          "matchDatasources": ["docker"],
+          "matchPackageNames": ["custom.io/**"],
+          "enabled": false
         }
       ],
       "customManagers": [
@@ -64,6 +69,17 @@ renovate:
           "customType": "regex",
           "description": "Update ARC runner image in inline Argo CD Helm values",
           "managerFilePatterns": ["/^apps\\/arc\\.ya?ml$/"],
+          "matchStrings": [
+            "image:\\s+(?<depName>ghcr\\.io\\/actions\\/actions-runner):(?<currentValue>[^\\s]+)"
+          ],
+          "datasourceTemplate": "docker",
+          "versioningTemplate": "docker",
+          "extractVersionTemplate": "^v?(?<version>.*)$"
+        },
+        {
+          "customType": "regex",
+          "description": "Update ARC runner image in crypto-lakehouse Helm values",
+          "managerFilePatterns": ["/^deploy\\/base\\/runners\\/values\\.ya?ml$/"],
           "matchStrings": [
             "image:\\s+(?<depName>ghcr\\.io\\/actions\\/actions-runner):(?<currentValue>[^\\s]+)"
           ],
