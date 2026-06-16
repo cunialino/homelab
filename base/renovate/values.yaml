@@ -68,7 +68,8 @@ renovate:
             "image:\\s+(?<depName>ghcr\\.io\\/actions\\/actions-runner):(?<currentValue>[^\\s]+)"
           ],
           "datasourceTemplate": "docker",
-          "versioningTemplate": "docker"
+          "versioningTemplate": "docker",
+          "extractVersionTemplate": "^v?(?<version>.*)$"
         },
         {
           "customType": "regex",
