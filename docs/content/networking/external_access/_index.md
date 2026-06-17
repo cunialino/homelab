@@ -20,7 +20,7 @@ I chose [Tailscale](https://tailscale.com/) as my external access solution becau
 
 ## How I installed it
 
-The [Tailscale Operator](https://tailscale.com/docs/features/kubernetes-operator) is deployed via [ArgoCD](/apps/_index.md) in the `tailscale` namespace:
+The [Tailscale Operator](https://tailscale.com/docs/features/kubernetes-operator) is deployed via [ArgoCD](/cicd/argocd/) in the `tailscale` namespace:
 
 - **Chart**: `tailscale-operator` from pkgs.tailscale.com
 - **Values**: OAuth credentials managed via an External Secret
@@ -28,38 +28,11 @@ The [Tailscale Operator](https://tailscale.com/docs/features/kubernetes-operator
 
 ### Key Technical Details
 
-**ArgoCD Application** ([apps/tailscale.yaml](https://github.com/cunialino/homelab/tree/main/apps/tailscale.yaml)):
-
-```yaml
-repoURL: https://pkgs.tailscale.com/helmcharts
-chart: tailscale-operator
-releaseName: tailscale-operator
-```
-
-**External Secret** ([base/tailscale/secrets.yaml](https://github.com/cunialino/homelab/tree/main/base/tailscale/secrets.yaml)):
-
-```yaml
-apiVersion: external-secrets.io/v1
-kind: ExternalSecret
-metadata:
-  name: tailscale-oauth-external
-  namespace: tailscale
-spec:
-  refreshInterval: 10s
-  secretStoreRef:
-    name: bitwarden-secretsmanager
-    kind: ClusterSecretStore
-  target:
-    name: operator-oauth
-    creationPolicy: Owner
-  data:
-    - secretKey: client_id
-      remoteRef:
-        key: "534c5bcb-93a0-4e15-adaf-b3e50186ebe7"
-    - secretKey: client_secret
-      remoteRef:
-        key: "920a6cab-f271-419c-9a79-b3e501871054"
-```
+The [ArgoCD Application](https://github.com/cunialino/homelab/tree/main/apps/tailscale.yaml)
+installs the `tailscale-operator` chart from `pkgs.tailscale.com/helmcharts`.
+OAuth credentials (`client_id`, `client_secret`) are fetched from Bitwarden
+Secrets Manager via an
+[ExternalSecret](https://github.com/cunialino/homelab/tree/main/base/tailscale/secrets.yaml).
 
 ## What it's used for
 

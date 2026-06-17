@@ -25,7 +25,7 @@ I define two main StorageClasses to cater to different performance and replicati
 
 I configure recurring jobs for filesystem trimming to run periodically, optimizing disk usage and performance.
 
-*   **`trim-all`**: This job runs every 3 hours and performs a filesystem trim on all volumes. Defined in [base/longhorn/maintanance.yaml](https://github.com/cunialino/homelab/tree/main/base/longhorn/maintanance.yaml).
+*   **`trim-all`**: This job runs every 3 hours and performs a filesystem trim on all volumes. Defined in [base/longhorn/maintenance.yaml](https://github.com/cunialino/homelab/tree/main/base/longhorn/maintenance.yaml).
 *   **`trim-freq`**: This job runs hourly and is specifically associated with volumes provisioned by the `longhorn-wdblack-freq` storage class. Defined in [base/longhorn/wd_black_freq.yaml](https://github.com/cunialino/homelab/tree/main/base/longhorn/wd_black_freq.yaml).
 
 ### Default Settings

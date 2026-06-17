@@ -13,5 +13,9 @@ when running queries on it.
 
 ## Configuration
 
-I deploy Garage via ArgoCD, with its configuration defined in 
-[base/garage/](https://github.com/cunialino/homelab/tree/main/base/garage/).
+I deploy Garage via [ArgoCD](/cicd/argocd/), with its Application definition at
+[apps/garage.yaml](https://github.com/cunialino/homelab/tree/main/apps/garage.yaml)
+and configuration at [base/garage/](https://github.com/cunialino/homelab/tree/main/base/garage/).
+
+API keys and the admin token are provisioned via an ExternalSecret from Bitwarden
+Secrets Manager.
