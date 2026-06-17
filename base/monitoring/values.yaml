@@ -86,6 +86,22 @@ alertmanager:
           matchers:
             - severity = "info"
 
+        - receiver: "null"
+          matchers:
+            - alertname = "KubeCPUOvercommit"
+        - receiver: "null"
+          matchers:
+            - alertname = "KubeMemoryOvercommit"
+        - receiver: "null"
+          matchers:
+            - alertname = "KubeCPUQuotaOvercommit"
+        - receiver: "null"
+          matchers:
+            - alertname = "KubeMemoryQuotaOvercommit"
+        - receiver: "null"
+          matchers:
+            - alertname = "KubeQuotaExceeded"
+
 defaultRules:
   rules:
     kubeControllerManager: false
