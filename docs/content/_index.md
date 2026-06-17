@@ -2,7 +2,6 @@
 template = "landing.html"
 
 [extra]
-version = "v0.1.0"
 section_order = ["hero", "features"]
 
 [extra.hero]

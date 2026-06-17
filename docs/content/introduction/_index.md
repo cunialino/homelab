@@ -41,12 +41,12 @@ Currently everything runs on the following hardware:
 - hp elite desk G2:
     
     - RAM: 16GB
-    - CPU: intel 15
+    - CPU: Intel i5
 
 
 ## Software
 
-All the nodes run on nixos, which makes it much easier to keep the aligned.
+All the nodes run on NixOS, which makes it much easier to keep them aligned.
 Dotfiles are available [here](https://github.com/cunialino/dotfiles)
 
 ## Cluster Topology
