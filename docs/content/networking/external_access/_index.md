@@ -22,7 +22,7 @@ I chose [Tailscale](https://tailscale.com/) as my external access solution becau
 
 The [Tailscale Operator](https://tailscale.com/docs/features/kubernetes-operator) is deployed via [ArgoCD](/apps/_index.md) in the `tailscale` namespace:
 
-- **Chart**: `tailscale-operator` version 1.92.5 from pkgs.tailscale.com
+- **Chart**: `tailscale-operator` from pkgs.tailscale.com
 - **Values**: OAuth credentials managed via an External Secret
 - **OAuth Secret**: `operator-oauth` fetched from Bitwarden Secrets Manager
 
@@ -33,7 +33,6 @@ The [Tailscale Operator](https://tailscale.com/docs/features/kubernetes-operator
 ```yaml
 repoURL: https://pkgs.tailscale.com/helmcharts
 chart: tailscale-operator
-targetRevision: 1.92.5
 releaseName: tailscale-operator
 ```
 
