@@ -14,7 +14,7 @@ I chose to run Renovate as a Kubernetes CronJob rather than as a GitHub App to k
 
 ## Deployment
 
-Renovate is deployed via [ArgoCD](/apps/_index.md) in the `renovate` namespace. It uses the official Renovate Helm chart and runs every 6 hours as a CronJob.
+Renovate is deployed via [ArgoCD](/cicd/argocd/) in the `renovate` namespace. It uses the official Renovate Helm chart and runs every 6 hours as a CronJob.
 
 You can find the ArgoCD Application at [apps/renovate.yaml](https://github.com/cunialino/homelab/tree/main/apps/renovate.yaml) and the configuration at [base/renovate/values.yaml](https://github.com/cunialino/homelab/tree/main/base/renovate/values.yaml).
 
