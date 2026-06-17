@@ -27,7 +27,7 @@ Cilium is configured via [cilium.yaml](https://github.com/cunialino/homelab/tree
 
 - **BPF mode**: `kubeProxyReplacement: true` replaces kube-proxy with eBPF-based load balancing
 - **Direct routing**: Auto-configured routes between nodes for efficient pod-to-pod communication
-- **BPF masquerade disabled**: Set to `false` so Cilium doesn't manage traffic on wifi interfaces used for daily internet activities
+- **BPF masquerade disabled**: Set to `true` so Cilium can manage the routing to internet correctly
 - **Hubble observability**: Full stack enabled with metrics for DNS, drops, TCP flows, and ICMP
 - **IPv4 CIDR**: Pod network uses `10.42.0.0/16` with native routing
 
