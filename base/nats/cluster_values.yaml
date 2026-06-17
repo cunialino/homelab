@@ -18,6 +18,11 @@ config:
 podTemplate:
   merge:
     spec:
+      tolerations:
+        - key: "opi"
+          operator: "Equal"
+          value: "ok"
+          effect: "NoSchedule"
       affinity:
         nodeAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -42,12 +47,12 @@ podTemplate:
 
 container:
   env:
-    GOMEMLIMIT: 1GiB
+    GOMEMLIMIT: 300MiB
   merge:
     resources:
       requests:
-        cpu: "200m"
-        memory: "1500Mi"
+        cpu: "100m"
+        memory: "512Mi"
       limits:
-        cpu: "2000m"
-        memory: "3Gi"
+        cpu: "500m"
+        memory: "1Gi"
