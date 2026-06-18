@@ -14,13 +14,13 @@ spec:
         kind: CronJob
         schedule: "*/15 * * * *"
         deschedulerPolicy:
+          maxNoOfPodsToEvictTotal: 10
           profiles:
             - name: AffinityAndBalance
               pluginConfig:
                 - name: DefaultEvictor
                   args:
-                    ignorePvcPods: false
-                    evictLocalStoragePods: false
+                    nodeFit: true
                 - name: RemovePodsViolatingInterPodAntiAffinity
                   args: {}
                 - name: RemovePodsViolatingNodeAffinity
@@ -30,8 +30,12 @@ spec:
                 - name: LowNodeUtilization
                   args:
                     thresholds:
+                      cpu: 20
+                      memory: 20
                       pods: 20
                     targetThresholds:
+                      cpu: 50
+                      memory: 50
                       pods: 50
                 - name: RemovePodsViolatingTopologySpreadConstraint
                   args:
