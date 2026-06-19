@@ -6,7 +6,7 @@ data:
   garage.toml: |
     metadata_dir = "/data/meta"
     data_dir = "/data/objects"
-    db_engine = "lmdb"
+    db_engine = "sqlite"
     replication_factor = 1
 
     rpc_bind_addr = "[::]:3901"
