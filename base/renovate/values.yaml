@@ -30,6 +30,7 @@ renovate:
         "kubernetes",
         "docker-compose",
         "dockerfile",
+        "cargo",
         "custom.regex"
       ],
       "argocd": {
@@ -61,6 +62,11 @@ renovate:
         {
           "matchDatasources": ["docker"],
           "matchPackageNames": ["custom.io/**"],
+          "enabled": false
+        },
+        {
+          "matchManagers": ["cargo"],
+          "matchRepositories": ["cunialino/homelab"],
           "enabled": false
         }
       ],
