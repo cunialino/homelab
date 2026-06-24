@@ -1,0 +1,49 @@
+nextcloud:
+  host: nextcloud.tail2f38ea.ts.net
+  trustedDomains:
+    - nextcloud
+  existingSecret:
+    enabled: true
+    secretName: nextcloud-admin
+
+persistence:
+  enabled: true
+  storageClass: longhorn-wdblack
+  size: 20Gi
+
+internalDatabase:
+  enabled: false
+
+externalDatabase:
+  enabled: true
+  type: postgresql
+  host: pg-cluster-rw.cnpg-system.svc.cluster.local
+  database: nextcloud
+  existingSecret:
+    enabled: true
+    secretName: nextcloud-db
+
+redis:
+  enabled: true
+
+ingress:
+  enabled: true
+  className: tailscale
+  annotations:
+    tailscale.com/proxy-class: "tailscale-small"
+  hosts:
+    - http:
+        paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - hosts:
+        - nextcloud
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    cpu: 2
+    memory: 2Gi

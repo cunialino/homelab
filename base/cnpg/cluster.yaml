@@ -57,6 +57,15 @@ spec:
         inherit: true
         passwordSecret:
           name: lakekeeper-secret
+      - name: nextcloud
+        ensure: present
+        comment: role used for nextcloud
+        login: true
+        superuser: false
+        connectionLimit: -1
+        inherit: true
+        passwordSecret:
+          name: nextcloud-db
 
   storage:
     size: 10Gi
