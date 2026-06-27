@@ -62,9 +62,10 @@ alertmanager:
               {{ if eq .Status "firing" }}🔴 FIRING{{ else }}✅ RESOLVED{{ end }} <b>{{ .GroupLabels.alertname }}</b>
 
               {{ range .Alerts }}
-              <b>Pod:</b> {{ .Labels.namespace }}/{{ .Labels.pod }}
-              <b>Summary:</b> {{ .Annotations.summary }}
-              <b>Severity:</b> {{ .Labels.severity }}
+              {{- range .Labels.SortedPairs }}<b>{{ .Name }}:</b> {{ .Value }}
+              {{ end -}}
+              {{- range .Annotations.SortedPairs }}{{ .Name }}: {{ .Value }}
+              {{ end -}}
               <b>Since:</b> {{ .StartsAt.Format "2006-01-02 15:04:05" }}
               {{ end }}
 
@@ -140,7 +141,7 @@ additionalPrometheusRulesMap:
       - name: pvc-alerts
         rules:
           - alert: PVCUsageWarning
-            expr: kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes > 0.8
+            expr: kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes < 0.2
             for: 5m
             labels:
               severity: warning
