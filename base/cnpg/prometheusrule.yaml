@@ -3,6 +3,8 @@ kind: PrometheusRule
 metadata:
   name: cnpg-replication-alerts
   namespace: cnpg-system
+  labels:
+    release: prometheus
 spec:
   groups:
     - name: cnpg-replication
