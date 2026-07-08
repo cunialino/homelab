@@ -2,6 +2,7 @@
 title = "Self-Hosted Apps"
 weight = 99
 sort_by = "weight"
+
 [extra]
 +++
 

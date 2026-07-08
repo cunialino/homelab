@@ -20,9 +20,17 @@ The `ClusterSecretStore` ([base/eso/clustersecretstore.yaml](https://github.com/
 
 I apply a `CiliumNetworkPolicy` ([base/eso/network_policy.yaml](https://github.com/cunialino/homelab/tree/main/base/eso/network_policy.yaml)) named `bitwarden-sdk-security` to restrict access to the Bitwarden SDK server within the `external-secrets` namespace. This policy ensures that only the External Secrets Operator and specific CIDR ranges can communicate with the SDK server on port 9998.
 
+### TLS Certificate
+
+The Bitwarden SDK server requires a TLS certificate for secure internal communication. I use a self-signed certificate provisioned via [cert-manager](https://cert-manager.io/) (deployed separately at [apps/cert-manager.yaml](https://github.com/cunialino/homelab/tree/main/apps/cert-manager.yaml)).
+
+The `Certificate` resource ([base/eso/bitclustertls.yaml](https://github.com/cunialino/homelab/tree/main/base/eso/bitclustertls.yaml)) creates a CA certificate signed by cert-manager's self-signed `ClusterIssuer` ([base/cert-manager/cluster-issuer.yaml](https://github.com/cunialino/homelab/tree/main/base/cert-manager/cluster-issuer.yaml)). The resulting secret is mounted by the Bitwarden SDK server pod for TLS termination.
+
+This keeps the entire certificate lifecycle — issuance, renewal, distribution — managed within Kubernetes without external dependencies.
+
 ### Kustomization
 
-The `kustomization.yaml` file in [base/eso/](https://github.com/cunialino/homelab/tree/main/base/eso/) combines my network policy and the cluster secret store configurations.
+The `kustomization.yaml` file in [base/eso/](https://github.com/cunialino/homelab/tree/main/base/eso/) combines the network policy, cluster secret store, and TLS certificate configurations.
 
 ### Values
 
