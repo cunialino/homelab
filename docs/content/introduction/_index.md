@@ -94,77 +94,86 @@ flowchart TB
 ## Architecture Overview
 
 {% mermaid() %}
-flowchart LR
-    subgraph access["Access Layer"]
-        tailscale["Tailscale VPN<br/>tail2f38ea.ts.net"]
-    end
-    subgraph gitops["GitOps"]
-        argocd["ArgoCD<br/>app-of-apps"]
-    end
-    subgraph network["Networking"]
-        cilium["Cilium CNI<br/>eBPF + Hubble"]
-        kubevip["kube-vip<br/>192.168.0.100"]
-    end
-    subgraph storage["Storage"]
-        longhorn["Longhorn<br/>Block Storage<br/>2 replicas"]
-        garage["Garage<br/>S3 Object Store"]
-    end
-    subgraph data["Data Layer"]
-        cnpg["CloudNativePG<br/>PostgreSQL Cluster"]
-        nats["NATS<br/>JetStream Messaging"]
-    end
-    subgraph apps["Applications"]
-        nextcloud["Nextcloud"]
-        vikunja["Vikunja"]
-    end
-    subgraph observability["Observability"]
-        alloy["Alloy"]
-        loki["Loki"]
-        prom["Prometheus"]
-        grafana["Grafana"]
-        alertmgr["Alertmanager"]
-    end
-    subgraph security["Security"]
-        eso["ESO + Bitwarden"]
-        cert["cert-manager"]
+flowchart TB
+    tailscale["Tailscale VPN<br/>tail2f38ea.ts.net"]
+
+    tailscale -->|access| argocd
+
+    subgraph platform["K3s platform"]
+        argocd["ArgoCD<br/>GitOps app-of-apps"]
+
+        subgraph networking["Networking"]
+            cilium["Cilium CNI<br/>eBPF + Hubble"]
+            kubevip["kube-vip<br/>192.168.0.100"]
+        end
+
+        subgraph security["Security"]
+            eso["ESO + Bitwarden"]
+            cert["cert-manager"]
+        end
+
+        subgraph storage["Storage"]
+            longhorn["Longhorn<br/>Block, 2 replicas"]
+            garage["Garage<br/>S3 object store"]
+        end
+
+        subgraph data["Data layer"]
+            cnpg["CloudNativePG<br/>Postgres cluster"]
+            nats["NATS<br/>JetStream"]
+        end
+
+        subgraph apps["Applications"]
+            nextcloud["Nextcloud"]
+            vikunja["Vikunja"]
+        end
+
+        subgraph observability["Observability"]
+            alloy["Alloy"]
+            loki["Loki"]
+            prom["Prometheus"]
+            grafana["Grafana"]
+            alertmgr["Alertmanager"]
+        end
+
+        storage --> data
+        storage --> apps
+        data --> apps
+
+        alloy --> loki
+        alloy --> prom
+        prom --> grafana
+        prom --> alertmgr
     end
 
-    tailscale --> argocd
-    tailscale --> grafana
-    tailscale --> longhorn
-    tailscale --> nextcloud
-    argocd --> cilium
-    argocd --> kubevip
-    argocd --> longhorn
-    argocd --> garage
-    argocd --> cnpg
-    argocd --> nats
-    argocd --> nextcloud
-    argocd --> vikunja
-    argocd --> alloy
-    argocd --> loki
-    argocd --> prom
-    argocd --> grafana
-    argocd --> alertmgr
-    argocd --> eso
-    argocd --> cert
-    cnpg --> nextcloud
-    cnpg --> vikunja
-    longhorn --> cnpg
-    longhorn --> nats
-    longhorn --> nextcloud
-    longhorn --> vikunja
-    longhorn --> garage
-    longhorn --> prom
-    longhorn --> loki
-    longhorn --> grafana
-    garage --> nextcloud
-    alloy --> loki
-    alloy --> prom
-    prom --> grafana
-    prom --> alertmgr
-    nats --> nextcloud
-    eso --> cert
+    tailscale -.->|ingress| nextcloud
+    tailscale -.->|ingress| vikunja
+    tailscale -.->|ingress| grafana
+    tailscale -.->|ingress| longhorn
+
+    classDef netNode fill:#1a3a5c,stroke:#378ADD,color:#B5D4F4
+    classDef secNode fill:#4a1f1f,stroke:#E24B4A,color:#F7C1C1
+    classDef stoNode fill:#4a3410,stroke:#EF9F27,color:#FAC775
+    classDef datNode fill:#0f3d33,stroke:#1D9E75,color:#9FE1CB
+    classDef appNode fill:#2a2359,stroke:#7F77DD,color:#CECBF6
+    classDef obsNode fill:#1f3a10,stroke:#639922,color:#C0DD97
+    classDef vpnNode fill:#2c2c2a,stroke:#888780,color:#D3D1C7
+
+    class tailscale vpnNode
+    class argocd appNode
+    class cilium,kubevip netNode
+    class eso,cert secNode
+    class longhorn,garage stoNode
+    class cnpg,nats datNode
+    class nextcloud,vikunja appNode
+    class alloy,loki,prom,grafana,alertmgr obsNode
+
+    style networking fill:#0d1f33,stroke:#378ADD
+    style security fill:#2e1010,stroke:#E24B4A
+    style storage fill:#2e1f08,stroke:#EF9F27
+    style data fill:#082922,stroke:#1D9E75
+    style apps fill:#191540,stroke:#7F77DD
+    style observability fill:#132608,stroke:#639922
+    style platform fill:#1a1a1a,stroke:#5F5E5A
 {% end %}
 
 #### A Note on Documentation
