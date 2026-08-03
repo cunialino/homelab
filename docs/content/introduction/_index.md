@@ -28,13 +28,13 @@ and serves as both a self-hosting platform and a testbed for new technology.
 |---------|-------|-----|-----|---------|------|
 | elcungem | AOOSTAR GEM 12 | Ryzen 7 8845HS | 64 GB | 1 TB SSD + 2 TB WD Black | Control plane + Longhorn |
 | elcunhp1 | HP Elite Desk G2 | Intel i5 | 16 GB | 2 TB SSD | Control plane + Longhorn |
-| elcunal | ASUS Zenbook 20215 | Intel i7 | 8 GB | — | Control plane |
+| elcunal | ASUS Zenbook 2015 | Intel i7 | 8 GB | — | Control plane |
 | opizero3 | Orange Pi Zero 3 | Allwinner H618 | 2 GB | — | Worker (tainted) |
 
 ## Software Stack
 
-| Component | Version / Notes |
-|-----------|-----------------|
+| Component | Notes |
+|-----------|-------|
 | OS | [NixOS](https://nixos.org/) (unstable channel) |
 | Kubernetes | [k3s](https://k3s.io/) with embedded etcd, HA control plane |
 | CNI | [Cilium](https://cilium.io/) with eBPF, kube-proxy replacement |
@@ -48,7 +48,7 @@ and serves as both a self-hosting platform and a testbed for new technology.
 | Monitoring | Prometheus + Grafana + Loki + Alloy + Alertmanager |
 | External Access | [Tailscale](https://tailscale.com/) operator — no public ports |
 | Automation | [Renovate](https://docs.renovatebot.com/) — dependency PRs |
-| Scheduling | [Descheduler](https://github.com/kubernetes-sigs/descheduler) — post-reboot rebalance |
+| Scheduling | [Descheduler](https://github.com/kubernetes-sigs/descheduler) — rebalance after reboots |
 
 ## Key Design Decisions
 
@@ -75,7 +75,7 @@ flowchart TB
         
         elcungem["elcungem<br/>AOOSTAR GEM 12<br/>Ryzen 7 8845HS<br/>64GB RAM<br/>2TB SSDs + Longhorn"]
         orange_pi["orange_pi<br/>Orange Pi Zero 3<br/>H618<br/>2GB RAM"]
-        zenbook["zenbook<br/>ASUS Zenbook 2025<br/>i7<br/>8GB RAM"]
+        zenbook["zenbook<br/>ASUS Zenbook 2015<br/>i7<br/>8GB RAM"]
         elcunhp1["elcunhp1<br/>HP Elite Desk G2<br/>i5<br/>16GB RAM<br/>2TB SSDs + Longhorn"]
         
         switch --> elcungem

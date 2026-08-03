@@ -37,7 +37,7 @@ Prometheus is responsible for collecting and storing metrics from my Kubernetes 
 [Loki](https://grafana.com/oss/loki/) is a log aggregation system that pairs with Grafana for log exploration.
 
 *   **Mode**: Deployed as a `SingleBinary` (single replica, no separate backend/read/write components) ([base/monitoring/loki-values.yaml](https://github.com/cunialino/homelab/tree/main/base/monitoring/loki-values.yaml)).
-*   **Storage**: Logs are stored on the filesystem with a 15Gi persistent volume claim.
+*   **Storage**: Logs are stored on the filesystem with 40Gi persistent volume.
 *   **Auth**: Authentication is disabled for internal cluster access.
 
 ### Alloy
