@@ -24,5 +24,4 @@ As an example, the [crypto-lakehouse](https://github.com/cunialino/crypto-lakeho
 *   **Target**: The `risingwave-compute` StatefulSet in the `risingwave` namespace.
 *   **Stream/Consumer**: Monitors the `risingwave_consumer` on the `tradesstream` JetStream stream.
 *   **Endpoint**: `nats-cluster-headless.nats.svc.cluster.local:8222`, the NATS server monitoring endpoint (KEDA resolves the consumer leader across the 3-node cluster automatically).
-*   **Thresholds**: Scales up when the consumer lag exceeds `lagThreshold: 50`, and activates at `activationLagThreshold: 10`.
 *   **Bounds**: `minReplicaCount: 0` and `maxReplicaCount: 10`, with a 300s scale-down stabilization window to avoid flapping.
