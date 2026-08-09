@@ -39,6 +39,15 @@ spec:
         inherit: true
         passwordSecret:
           name: rw-metastore-secret
+      - name: arroyo
+        ensure: present
+        comment: role used for arroyo
+        login: true
+        superuser: false
+        connectionLimit: -1
+        inherit: true
+        passwordSecret:
+          name: arroyo-metastore-secret
       - name: vikunja
         ensure: present
         comment: role used for vikunja

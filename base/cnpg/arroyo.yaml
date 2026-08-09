@@ -1,0 +1,9 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: arroyo
+spec:
+  name: arroyo
+  owner: arroyo
+  cluster:
+    name: pg-cluster
