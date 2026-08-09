@@ -32,6 +32,12 @@ singleBinary:
     enabled: true
     size: 40Gi
 
+chunksCache:
+  enabled: false
+
+resultsCache:
+  enabled: false
+
 lokiCanary:
   enabled: true
   tolerations:
