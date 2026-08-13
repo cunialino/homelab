@@ -1,0 +1,18 @@
+apiVersion: cilium.io/v2alpha1
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  name: garage-l2
+spec:
+  serviceSelector:
+    matchLabels:
+      app: garage
+  nodeSelector:
+    matchLabels:
+      kubernetes.io/hostname: elcungem
+  interfaces:
+    - "^eth.*"
+    - "^enp.*"
+    - "^eno.*"
+    - "^ens.*"
+    - "^end.*"
+  loadBalancerIPs: true
