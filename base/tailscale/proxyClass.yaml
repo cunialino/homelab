@@ -15,4 +15,22 @@ spec:
           limits:
             cpu: "10m"
             memory: "64Mi"
+---
+apiVersion: tailscale.com/v1alpha1
+kind: ProxyClass
+metadata:
+  name: tailscale-stream
+  annotations:
+    argocd.argoproj.io/sync-wave: "9"
+spec:
+  statefulSet:
+    pod:
+      tailscaleContainer:
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "1"
+            memory: "512Mi"
 
