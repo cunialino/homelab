@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/monitoring.coreos.com_servicemonitor.json
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: garage
+  namespace: garage
+  labels:
+    # kube-prometheus-stack selects ServiceMonitors by this label.
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: garage
+  endpoints:
+    - port: admin
+      path: /metrics
+      interval: 30s
