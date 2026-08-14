@@ -9,6 +9,10 @@ data:
     db_engine = "sqlite"
     replication_factor = 1
 
+    # Data is already zstd-compressed (parquet by arroyo, etc.), so garage-level
+    # zstd is pure CPU with no size win. 'none' disables it entirely.
+    compression_level = 'none'
+
     rpc_bind_addr = "[::]:3901"
     # rpc_secret is injected via GARAGE_RPC_SECRET env var
 
