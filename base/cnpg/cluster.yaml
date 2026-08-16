@@ -75,6 +75,15 @@ spec:
         inherit: true
         passwordSecret:
           name: nextcloud-db
+      - name: openwebui
+        ensure: present
+        comment: role used for openwebui
+        login: true
+        superuser: false
+        connectionLimit: -1
+        inherit: true
+        passwordSecret:
+          name: openwebui-db
 
   storage:
     size: 10Gi
