@@ -1,0 +1,33 @@
+crds:
+  install: true
+
+operator:
+  resources:
+    limits:
+      cpu: 1
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 64Mi
+
+scaler:
+  replicas: 2
+  resources:
+    limits:
+      cpu: 1
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 64Mi
+
+interceptor:
+  replicas:
+    min: 2
+    max: 10
+  resources:
+    limits:
+      cpu: 1
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 64Mi

@@ -14,6 +14,14 @@ spec:
         valueFiles:
           - $my-repo/base/keda/values.yaml
 
+    - repoURL: https://kedacore.github.io/charts
+      chart: keda-add-ons-http
+      targetRevision: 0.15.0
+      helm:
+        releaseName: keda-add-ons-http
+        valueFiles:
+          - $my-repo/base/keda/http-values.yaml
+
     - repoURL: https://github.com/cunialino/homelab.git
       path: base/keda
       targetRevision: main
