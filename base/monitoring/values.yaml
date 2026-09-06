@@ -25,7 +25,11 @@ grafana:
 prometheus:
   prometheusSpec:
     enableRemoteWriteReceiver: true
-    retention: 10d
+    retention: 7d
+    walCompression: true
+    tsdb:
+      outboardSources:
+        - blockDir
     storageSpec:
       volumeClaimTemplate:
        spec:
@@ -106,6 +110,8 @@ alertmanager:
 defaultRules:
   rules:
     kubeControllerManager: false
+    kubeEndpoint: false
+    kubeNode: false
     kubeProxy: false
     kubeSchedulerAlerting: false
 
