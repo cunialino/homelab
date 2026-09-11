@@ -11,6 +11,10 @@ My homelab is a bare metal k3s cluster spread across four machines — a mix of
 a mini-PC, a single-board computer, a laptop, and an old desktop. It runs 24/7
 and serves as both a self-hosting platform and a testbed for new technology.
 
+Alongside the cluster sits **elcunhalo**, a standalone Strix Halo machine that
+serves LLMs over the LAN to the other machines (see
+[myai](/self_hosting/myai/)).
+
 ## Goals
 
 - **Run reliable self-hosted services** — Vikunja, Nextcloud, and supporting
@@ -30,6 +34,7 @@ and serves as both a self-hosting platform and a testbed for new technology.
 | elcunhp1 | HP Elite Desk G2 | Intel i5 | 16 GB | 2 TB SSD | Control plane + Longhorn |
 | elcunal | ASUS Zenbook 2015 | Intel i7 | 8 GB | — | Control plane |
 | opizero3 | Orange Pi Zero 3 | Allwinner H618 | 2 GB | — | Worker (tainted) |
+| elcunhalo | AMD Strix Halo | Ryzen AI Max+ 395 | 128 GB (unified) | — | External LLM serving (not a k3s node) |
 
 ## Software Stack
 
@@ -83,12 +88,16 @@ flowchart TB
         switch --> zenbook
         switch --> elcunhp1
     end
-    
+
+    elcunhalo["elcunhalo<br/>AMD Strix Halo<br/>Ryzen AI Max+ 395<br/>128GB unified<br/>ROCm 10 · LLM serving"]
+    switch --> elcunhalo
+
     style switch fill:#888,stroke:#333
     style elcungem fill:#bbf,stroke:#333
     style elcunhp1 fill:#bbf,stroke:#333
     style orange_pi fill:#ccc,stroke:#333
     style zenbook fill:#ccc,stroke:#333
+    style elcunhalo fill:#fdd,stroke:#333
 {% end %}
 
 ## Architecture Overview
