@@ -92,12 +92,12 @@ flowchart TB
     elcunhalo["elcunhalo<br/>AMD Strix Halo<br/>Ryzen AI Max+ 395<br/>128GB unified<br/>ROCm 10 · LLM serving"]
     switch --> elcunhalo
 
-    style switch fill:#888,stroke:#333
-    style elcungem fill:#bbf,stroke:#333
-    style elcunhp1 fill:#bbf,stroke:#333
-    style orange_pi fill:#ccc,stroke:#333
-    style zenbook fill:#ccc,stroke:#333
-    style elcunhalo fill:#fdd,stroke:#333
+    style switch fill:#888,stroke:#333,color:#ffffff
+    style elcungem fill:#bbf,stroke:#333,color:#1a1a1a
+    style elcunhp1 fill:#bbf,stroke:#333,color:#1a1a1a
+    style orange_pi fill:#ccc,stroke:#333,color:#1a1a1a
+    style zenbook fill:#ccc,stroke:#333,color:#1a1a1a
+    style elcunhalo fill:#fdd,stroke:#333,color:#1a1a1a
 {% end %}
 
 ## Architecture Overview
