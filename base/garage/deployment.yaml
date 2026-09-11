@@ -32,7 +32,7 @@ spec:
         runAsUser: 1000
         fsGroup: 1000
       containers:
-        - image: dxflrs/garage:v2.3.0
+        - image: dxflrs/garage:v2.4.1
           name: garage
           command: ["/garage"]
           args:
