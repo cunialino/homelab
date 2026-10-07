@@ -1,0 +1,103 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ntfy-config
+data:
+  # Reachable as ntfy.tail2f38ea.ts.net (tailscale Ingress gives the short name
+  # its tailnet FQDN). base-url only matters for links inside messages.
+  NTFY_BASE_URL: "https://ntfy.tail2f38ea.ts.net"
+  NTFY_LISTEN_HTTP: ":80"
+
+  # The tailscale operator terminates and forwards, so rate limiting must key off
+  # X-Forwarded-For instead of the proxy's address.
+  NTFY_BEHIND_PROXY: "true"
+
+  # Message cache: what makes an overnight queue usable -- the phone subscribes
+  # in the morning and gets everything published while it was offline. On a PVC,
+  # so a pod restart does not swallow the night.
+  NTFY_CACHE_FILE: "/var/lib/ntfy/cache.db"
+  NTFY_CACHE_DURATION: "24h"
+
+  # Long-lived poll/WebSocket connections through the tailscale proxy.
+  NTFY_KEEPALIVE_INTERVAL: "45s"
+
+  # Deliberately NO auth: this instance is only ever reachable from the tailnet
+  # (tailscale Ingress, no public listener), so the tailnet ACLs are the access
+  # control and there are no credentials to rotate. Consequences, accepted:
+  #   * the topic name is the only gate -- publish and subscribe are open to
+  #     anything on the tailnet, so treat topic names as secrets (never commit
+  #     one to a public repo);
+  #   * no attachments (attachment-cache-dir unset) and no user database, which
+  #     also means no PVC content worth backing up beyond the cache.
+  # If this ever stops being tailnet-only, set NTFY_AUTH_FILE plus
+  # NTFY_AUTH_DEFAULT_ACCESS=deny-all and per-topic ACLs before that changes.
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ntfy-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn-wdblack
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ntfy
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0        # RWO volume: no second pod alongside the old one
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: ntfy
+  template:
+    metadata:
+      labels:
+        app: ntfy
+    spec:
+      containers:
+        - name: ntfy
+          image: docker.io/binwiederhier/ntfy:v2.29.0
+          command: ["ntfy"]
+          args: ["serve"]
+          ports:
+            - name: http
+              containerPort: 80
+          envFrom:
+            - configMapRef:
+                name: ntfy-config
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/ntfy
+          readinessProbe:
+            httpGet:
+              path: /v1/health
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /v1/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "25m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: ntfy-data
