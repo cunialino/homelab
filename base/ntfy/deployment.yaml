@@ -19,6 +19,24 @@ data:
   NTFY_CACHE_FILE: "/var/lib/ntfy/cache.db"
   NTFY_CACHE_DURATION: "24h"
 
+  # Attachments: PUT /<topic> with a file body stores the file under
+  # attachment-cache-dir, and the notification links it as /file/<id> on
+  # base-url -- both keys are required, the server refuses to start with only
+  # one. Under /var/lib/ntfy, so uploads sit on the same PVC as the cache and
+  # survive a pod restart; ntfy prunes them after expiry.
+  NTFY_ATTACHMENT_CACHE_DIR: "/var/lib/ntfy/attachments"
+  NTFY_ATTACHMENT_FILE_SIZE_LIMIT: "50M"
+  NTFY_ATTACHMENT_TOTAL_SIZE_LIMIT: "3G"
+  NTFY_ATTACHMENT_EXPIRY_DURATION: "72h"
+
+  # The per-visitor (client IP) caps, not the global ones, decide whether an
+  # upload succeeds here: with no auth every publisher is an anonymous visitor,
+  # and the defaults (~100M total, ~500M daily bandwidth) only cover a snapshot.
+  # Sized to the global cache limits above -- one visitor can fill the cache but
+  # not out-run it, and re-uploading for 10G a day is still bounded by 3G on disk.
+  NTFY_VISITOR_ATTACHMENT_TOTAL_SIZE_LIMIT: "3G"
+  NTFY_VISITOR_ATTACHMENT_DAILY_BANDWIDTH_LIMIT: "10G"
+
   # Long-lived poll/WebSocket connections through the tailscale proxy.
   NTFY_KEEPALIVE_INTERVAL: "45s"
 
@@ -28,8 +46,13 @@ data:
   #   * the topic name is the only gate -- publish and subscribe are open to
   #     anything on the tailnet, so treat topic names as secrets (never commit
   #     one to a public repo);
-  #   * no attachments (attachment-cache-dir unset) and no user database, which
-  #     also means no PVC content worth backing up beyond the cache.
+  #   * attachments are enabled (attachment-cache-dir on the PVC), so uploading
+  #     and downloading files is open to anything on the tailnet as well -- no
+  #     identity to gate on, only the per-client-IP limits above. Uploads are
+  #     pruned after attachment-expiry-duration (72h), and the PVC now holds
+  #     real user data, so it is worth backing up: unlike cache.db, a lost
+  #     attachment is a file nobody can republish from the queue. Still no
+  #     user database.
   # If this ever stops being tailnet-only, set NTFY_AUTH_FILE plus
   # NTFY_AUTH_DEFAULT_ACCESS=deny-all and per-topic ACLs before that changes.
 ---
@@ -43,7 +66,7 @@ spec:
   storageClassName: longhorn-wdblack
   resources:
     requests:
-      storage: 1Gi
+      storage: 5Gi
 ---
 apiVersion: apps/v1
 kind: Deployment
