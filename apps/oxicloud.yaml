@@ -1,0 +1,41 @@
+# OxiCloud — self-hosted cloud storage (files/photos/calendar/contacts, Rust).
+#
+# Upstream ships its Helm chart in-tree at charts/oxicloud and does not publish it
+# to an HTTP or OCI registry (`helm upgrade --install oxicloud charts/oxicloud` from
+# a clone), so the chart source is the upstream git repo pulled by `path`, pinned to
+# the tag that chart was released with. The upstream repo is public, so no
+# RepositorySecret is registered for it — only cunialino/homelab has credentials
+# (base/argocd/values.yaml extraObjects).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: oxicloud
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: https://github.com/AtalayaLabs/OxiCloud.git
+      path: charts/oxicloud
+      targetRevision: v0.9.2
+      helm:
+        releaseName: oxicloud
+        valueFiles:
+          - $my-repo/base/oxicloud/values.yaml
+
+    # This repo, referenced so the values file can be read alongside the upstream
+    # chart. ArgoCD resolves $my-repo to the repo root, not to `path`.
+    - repoURL: https://github.com/cunialino/homelab.git
+      path: base/oxicloud
+      targetRevision: main
+      ref: my-repo
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: oxicloud
+
+  syncPolicy:
+    automated:
+      enabled: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

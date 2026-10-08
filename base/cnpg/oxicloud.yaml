@@ -1,0 +1,9 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: oxicloud
+spec:
+  name: oxicloud
+  owner: oxicloud
+  cluster:
+    name: pg-cluster

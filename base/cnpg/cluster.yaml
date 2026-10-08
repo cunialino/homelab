@@ -75,6 +75,15 @@ spec:
         inherit: true
         passwordSecret:
           name: nextcloud-db
+      - name: oxicloud
+        ensure: present
+        comment: role used for oxicloud
+        login: true
+        superuser: false
+        connectionLimit: -1
+        inherit: true
+        passwordSecret:
+          name: oxicloud-db
       - name: openwebui
         ensure: present
         comment: role used for openwebui

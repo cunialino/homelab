@@ -1,0 +1,78 @@
+# Helm values for the upstream chart (charts/oxicloud @ v0.9.2 of
+# https://github.com/AtalayaLabs/OxiCloud), consumed via $my-repo from
+# apps/oxicloud.yaml.
+image:
+  repository: diocrafts/oxicloud
+  tag: "0.9.2"
+  pullPolicy: IfNotPresent
+
+config:
+  server:
+    port: 8086
+    host: "0.0.0.0"
+    # The tailscale Ingress turns the `oxicloud` host into its tailnet FQDN; this is
+    # the URL that ends up in share links, OIDC callbacks and WOPI URLs.
+    baseUrl: "https://oxicloud.tail2f38ea.ts.net"
+  features:
+    enableAuth: "true"
+    enableSharing: "true"
+  mimalloc:
+    purgeDelay: "0"
+    allowLargeOsPages: "0"
+
+# Rendered verbatim into the StatefulSet `env` by the chart (toYaml). NOTE: Helm
+# replaces lists instead of merging them, so this list also has to carry the two
+# paths the chart's own values.yaml sets — dropping them would fall back to the
+# binary defaults (./storage, ./static).
+envs:
+  # DSN comes from the oxicloud-db Secret that the ExternalSecret of the same
+  # name builds in this namespace (see base/cnpg/secret_oxicloud.yaml), so no
+  # password is stored in git. It has to be a Secret in this namespace:
+  # secretKeyRef never resolves across namespaces.
+  - name: OXICLOUD_DB_CONNECTION_STRING
+    valueFrom:
+      secretKeyRef:
+        name: oxicloud-db
+        key: uri
+  # TLS is terminated by the tailscale proxy, which forwards X-Forwarded-Proto/Host;
+  # without this the session cookies are marked insecure (and DPoP binding computes
+  # the wrong htu).
+  - name: OXICLOUD_COOKIE_SECURE
+    value: "true"
+  - name: OXICLOUD_STORAGE_PATH
+    value: /app/storage
+  - name: OXICLOUD_STATIC_PATH
+    value: /app/static
+
+persistence:
+  enabled: true
+  storageClass: longhorn-wdblack
+  accessMode: ReadWriteOnce
+  size: 20Gi
+
+# Collabora/WOPI left out of the first deployment: it needs its own frame-ancestors
+# and URL wiring. Flip to true in a follow-up.
+wopi:
+  enabled: false
+
+secrets:
+  # The chart generates the JWT secret itself (persisted to
+  # <storage>/.jwt_secret on the PVC), so nothing is templated here.
+  existingSecret: ""
+
+ingress:
+  enabled: true
+  className: tailscale
+  annotations:
+    tailscale.com/proxy-class: "tailscale-small"
+  # The chart only ever renders the first host, and routes everything to the
+  # OxiCloud service while wopi.enabled is false.
+  hosts:
+    - host: oxicloud
+      paths:
+        - path: /
+          pathType: Prefix
+  # No secretName: the tailscale operator serves the tailnet certificate.
+  tls:
+    - hosts:
+        - oxicloud
