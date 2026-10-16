@@ -31,6 +31,9 @@ singleBinary:
   persistence:
     enabled: true
     size: 40Gi
+    storageClass: longhorn-wdblack
+    whenScaled: Retain
+    whenDeleted: Retain
 
 chunksCache:
   enabled: false
