@@ -16,7 +16,7 @@ spec:
   sources:
     - repoURL: https://github.com/AtalayaLabs/OxiCloud.git
       path: charts/oxicloud
-      targetRevision: v0.9.2
+      targetRevision: v0.9.3
       helm:
         releaseName: oxicloud
         valueFiles:
