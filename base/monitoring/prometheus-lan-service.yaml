@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/yannh/kubernetes-json-schema/refs/heads/master/v1.34.3/service.json
+# LAN entrypoint for the Prometheus remote write receiver
+# (prometheus.prometheusSpec.enableRemoteWriteReceiver). prometheus-operated is
+# headless, so hosts outside the cluster - e.g. elcunhalo (192.168.0.6), which is
+# not a k3s node - have no in-cluster DNS nor a route into 10.42.0.0/16 to reach it.
+# The receiver itself is unauthenticated: the source range below is the only guard.
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-lan
+  namespace: monitoring
+  annotations:
+    lbipam.cilium.io/ips: "192.168.0.203"
+spec:
+  type: LoadBalancer
+  loadBalancerSourceRanges:
+    - "192.168.0.0/24"
+  selector:
+    app.kubernetes.io/name: prometheus
+    operator.prometheus.io/name: prometheus-kube-prometheus-prometheus
+  ports:
+    - name: web
+      protocol: TCP
+      port: 9090
+      targetPort: 9090

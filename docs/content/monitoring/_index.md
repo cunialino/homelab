@@ -31,6 +31,16 @@ Prometheus is responsible for collecting and storing metrics from my Kubernetes 
 *   **Retention**: Prometheus is configured to retain metrics for 10 days ([base/monitoring/values.yaml](https://github.com/cunialino/homelab/tree/main/base/monitoring/values.yaml)).
 *   **Storage**: It uses a 25Gi persistent volume with the `longhorn-wdblack` storage class for metric storage ([base/monitoring/values.yaml](https://github.com/cunialino/homelab/tree/main/base/monitoring/values.yaml)).
 *   **Remote Write**: The remote write receiver is enabled, allowing Alloy to forward node metrics directly to Prometheus.
+*   **Remote Write From Outside The Cluster**: `prometheus-operated` is headless, so hosts that are not k3s nodes cannot reach it — they have neither
+    cluster DNS nor a route into `10.42.0.0/16`. A dedicated `LoadBalancer` service ([base/monitoring/prometheus-lan-service.yaml](https://github.com/cunialino/homelab/tree/main/base/monitoring/prometheus-lan-service.yaml))
+    claims `192.168.0.203` from the [LAN IP pool](https://github.com/cunialino/homelab/tree/main/base/cilium/lb-ip-pool.yaml) and publishes `:9090`
+    on the switch, restricted by `loadBalancerSourceRanges` to `192.168.0.0/24`.
+    This is how **elcunhalo** (`192.168.0.6`, the Strix Halo LLM box) ships its metrics: its Alloy systemd unit scrapes a local
+    `prometheus.exporter.unix` and remote writes to `http://192.168.0.203:9090/api/v1/write`, stamping `job="host-node-exporter"` and
+    `instance="elcunhalo"` so it does not blend into the `job="node-exporter"` series produced by the in-cluster Alloy DaemonSet.
+
+    **Note:** the Prometheus remote write receiver has no authentication of any kind, and this Service exposes the whole HTTP API — queries and
+    `/api/v1/admin/*` included — not only `POST /api/v1/write`. The LAN source range is the only thing guarding it.
 
 ### Loki
 
