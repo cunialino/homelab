@@ -10,11 +10,11 @@ spec:
       tailscaleContainer:
         resources:
           requests:
-            cpu: "1m"
-            memory: "32Mi"
-          limits:
-            cpu: "10m"
+            cpu: "50m"
             memory: "64Mi"
+          limits:
+            cpu: "500m"
+            memory: "128Mi"
 ---
 apiVersion: tailscale.com/v1alpha1
 kind: ProxyClass
