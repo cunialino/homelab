@@ -6,7 +6,7 @@ metadata:
 spec:
   interval: 1m
   ref:
-    branch: flux-migration
+    branch: main
   url: https://github.com/cunialino/homelab.git
   ignore: |
     # exclude all
