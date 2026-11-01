@@ -22,7 +22,7 @@ State below was checked at 2026-11-01T10:35Z, except the sync ref, which moved t
 | Kustomizations | `flux-system`, `vikunja`, `ntfy`, `cilium`, `garage` — all `Ready`, all applied `main@46ccd81`. Re-verified 15:30Z after the node incident (§6): `spec.ref.branch` still `main`, `suspend` unset, so the flip is converged, not merely applied once |
 | Argo Applications deleted | `vikunja`, `ntfy`, `garage`, `cilium` — `--cascade=orphan`, no finalizers present |
 | `root-bootstrap` | `automated: {enabled: false}` live **and** in `bootstrap/root-app.yaml` (plan phase 2) |
-| Remaining Argo Applications | 26 = 25 workload apps + `root-bootstrap`. One of them, `descheduler-affinity-sync`, is now also Flux-owned and **still an Argo Application with `prune`+`selfHeal`** — the orphan step is pending, so two engines see it (§5.3) |
+| Remaining Argo Applications | **25** = 24 workload apps + `root-bootstrap`. `descheduler-affinity-sync` was orphaned and its file deleted, so it is Flux-only (§5.3) |
 | SOPS | age keypair live; `secret/sops-age` in `flux-system` (data key `age.agekey`); `.sops.yaml` committed; probe Secret `vikunja/vikunja-sops-probe` reconciled |
 | age private key | `~/.config/sops/age/keys.txt` (0600) + Bitwarden (user-confirmed) |
 | Secret **content** migration | **none.** Only ExternalSecret manifests moved with their apps. All 21 ExternalSecrets still pull from `bitwarden-secretsmanager` |
@@ -148,11 +148,9 @@ Working pipeline: `age-keygen` → `.sops.yaml` (`encrypted_regex: ^(data|string
    makes the default path one `apply` per release rather than ~300 annotations — but only for
    releases whose live state equals the chart render. OxiCloud additionally needs
    `GitRepository` + `HelmChart` (chart at `charts/oxicloud` in upstream git, tag-pinned).
-6. **Finish the `descheduler` cutover**: push the commit, apply `clusters/homelab/infra/
-descheduler.yaml` (the sync CR is deliberately not live yet — only the HelmRelease and
-   HelmRepository are), then `kubectl -n argocd delete application descheduler-affinity-sync
-   --cascade=orphan`, then `chore(descheduler): drop argocd application`. Until the Application is
-   gone, Argo keeps self-healing an object Flux now owns.
+6. ~~Finish the `descheduler` cutover.~~ Done. Flux created the sync CR Ready from the push, the
+   Argo Application was deleted `--cascade=orphan`, and all five object uids are unchanged (§5.3).
+   Also needed a field-ownership handover that only shows up in this direction — see §5.3.
 7. Cross-repo apps (myai, crypto-lakehouse) need commits in those repos, which were never
    touched.
 8. Optional: `.gitignore` guard for `keys.txt` / `*.agekey` (repo currently ignores only
@@ -253,9 +251,23 @@ six drifted releases (`nextcloud`, `nats`, `monitoring`, `openwebui`, `oxicloud`
 will have the chart's state written over theirs, and CNPG/Longhorn CRs are mutated by their
 operators, so those keep the scripted fallback route plus `ssa: IfNotPresent`/`Merge`.
 
-State left mid-cutover on purpose: `HelmRelease` and `HelmRepository` are live, the
-`clusters/homelab/infra/descheduler.yaml` sync CR is not applied yet (it arrives with the push),
-and the Argo Application is still present — see §5 item 6.
+Cutover finished on `main@421c7eb`, and one step there was not in any plan: I had applied the
+`HelmRelease` and `HelmRepository` earlier with `kubectl apply --server-side`, which made
+**`kubectl | Apply` a competing SSA manager**. kustomize-controller does not force conflicts, so
+Flux's first pass over those objects would have failed. Hand the fields to the controller's own
+manager before pushing work that lets Flux own something you applied by hand:
+
+```bash
+kubectl apply --server-side --force-conflicts --field-manager=kustomize-controller \
+  -f <rendered infrastructure dir>
+```
+
+Then `kustomization/descheduler` was created by `flux-system` itself (never `kubectl apply`-ed, so
+only the controller owns the sync CR) and went `Ready` on the same revision as the rest. Finally
+`kubectl -n argocd delete application descheduler-affinity-sync --cascade=orphan` — no finalizers
+present, and afterwards CronJob `9152b18e…`, ServiceAccount `80e58428…`, ConfigMap `dda127cf…`,
+ClusterRole `387878ba…`, ClusterRoleBinding `8a3cbae5…` all identical to before; Helm still
+revision 1 `deployed`; 25 Applications left in Argo.
 
 ## 6. Cluster noise observed, unrelated to the migration
 

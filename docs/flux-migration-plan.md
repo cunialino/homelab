@@ -39,10 +39,10 @@ webhooks. Mostly mechanical.
 | `openwebui` | 1 (ConfigMap) | low |
 | `oxicloud` | 1 (StatefulSet) | low/medium |
 
-Recounted 2026-11-01, after four adoptions: **26** Argo Applications left (18 `Synced`,
-8 `OutOfSync` — the seven above plus `graphiti`, whose diff is the `graphiti-factories` ConfigMap
-Argo left behind when it was deleted from Git with `prune: false`), 15 homelab Application files
-in `apps/`, and **zero Helm releases adopted**. Live state is tracked in
+Recounted 2026-11-01: **25** Argo Applications left (24 workloads + `root-bootstrap`), 14 homelab
+Application files in `apps/`, one Helm release adopted (`descheduler`, log §5.3). The `OutOfSync`
+set is the seven above plus `graphiti`, whose diff is the `graphiti-factories` ConfigMap Argo left
+behind when it was deleted from Git with `prune: false`. Live state is tracked in
 [flux-migration-log.md](./flux-migration-log.md) §1, not here.
 
 ---
@@ -525,7 +525,7 @@ Application is gone, so removing it is cleanup, not a prerequisite.
 |---|---|---|
 | 1 | `ntfy` ✅, `ddg-search` (cross-repo, not started) | only app with no secret and no operator; drills adoption + the `apps/<app>/base` wiring with the smallest possible blast radius |
 | 1b | `cilium` ✅ — LB IP pool only, **was not in the original wave list** | cluster-scoped and trivially in sync; the CNI itself is installed with `cilium install`, outside Git either way |
-| 2 | `external-secrets` + `infra/eso-store`, `cert-manager` + `infra/tls`, `tailscale-operator` + `infra/proxy-classes`, `descheduler` | establishes the `infra/*` pattern and the config-layer `dependsOn` edges the rest of the cluster needs |
+| 2 | `descheduler` ✅ — first Helm release, adopted by take-ownership with no annotations at all — then `external-secrets` + `infra/eso-store`, `cert-manager` + `infra/tls`, `tailscale-operator` + `infra/proxy-classes` | establishes the `infra/*` pattern and the config-layer `dependsOn` edges the rest of the cluster needs |
 | 2b | `vikunja` ✅, `garage` ✅ — both still ESO-backed, and neither has `dependsOn` on `infra/eso-store` because that layer does not exist as a Flux object yet | plain manifests, but both carry ExternalSecrets, so they must follow `infra/eso-store` |
 | 3 | `cloudnative-pg` → then `infra/postgres` (Clusters + their ExternalSecrets) | operator first; verify `pg-cluster` healthy before its CRs move |
 | 4 | `keda`(+`keda-add-ons-http`), `nats`, `arc-controller`, both `arc` scale-sets | stateful-adjacent; ARC is your CI, keep one runner working |
