@@ -1,10 +1,12 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: vikunja
+# No namespace transformer: this app owns a Secret in cnpg-system as well as in vikunja, and the
+# transformer would rewrite it into vikunja. Every resource states its own namespace instead.
 resources:
   - namespace.yaml
   - externalsecret.yaml
-  - secret-probe.yaml
+  - secret-app.yaml
+  - secret-cnpg-role.yaml
   - configmap.yaml
   - pvc.yaml
   - deployment.yaml
