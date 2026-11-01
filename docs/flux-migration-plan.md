@@ -61,9 +61,9 @@ homelab/
 │   ├── kustomization.yaml             #   lists sources.yaml + infra/* + apps/*
 │   ├── sources.yaml                   #   GitRepository: myai, crypto-lakehouse
 │   ├── infra/                         #   ONE Flux Kustomization CR per controller / config layer
-│   │   ├── cert-manager.yaml  external-secrets.yaml  longhorn.yaml  cloudnative-pg.yaml
+│   │   ├── cert-manager.yaml  longhorn.yaml  cloudnative-pg.yaml
 │   │   ├── tailscale-operator.yaml  keda.yaml  descheduler.yaml  arc-controller.yaml
-│   │   └── eso-store.yaml  tls.yaml  proxy-classes.yaml  postgres.yaml  longhorn-config.yaml
+│   │   └── tls.yaml  proxy-classes.yaml  postgres.yaml  longhorn-config.yaml
 │   ├── apps/                          #   ONE Flux Kustomization CR per application, incl. cross-repo
 │   │   ├── nats.yaml  garage.yaml  monitoring.yaml  nextcloud.yaml  vikunja.yaml
 │   │   ├── ntfy.yaml  oxicloud.yaml  renovate.yaml  arc-scale-sets.yaml
@@ -73,13 +73,13 @@ homelab/
 ├── infrastructure/
 │   ├── controllers/<name>/            #   dir per controller: namespace + chart source + HelmRelease
 │   │   └── {kustomization,namespace,repository,helmrelease}.yaml
-│   │   # cert-manager  external-secrets  longhorn  cloudnative-pg
+│   │   # cert-manager  longhorn  cloudnative-pg      (external-secrets is retired, never adopted)
 │   │   # tailscale-operator  keda (+ keda-add-ons-http, 2 HRs)  descheduler  arc-controller
 │   └── configs/                       #   CRs consumed by those operators, split by dependency
-│       ├── secret-stores/             #     was base/eso/{clustersecretstore,bitclustertls}.yaml
 │       ├── tls/                       #     was base/cert-manager/cluster-issuer.yaml
 │       ├── proxy-classes/             #     was base/tailscale/proxyClass.yaml
-│       ├── postgres/                  #     was base/cnpg/*.yaml (Clusters) + secret_*.yaml
+│       ├── postgres/                  #     was base/cnpg/*.yaml — Clusters only; role Secrets
+│       │                              #     ship with the owning app as age-encrypted files
 │       └── longhorn/                  #     was base/longhorn/{nodes,maintenance,wd_black*}.yaml
 └── apps/                              # applications: env-agnostic base + one cluster overlay
     ├── <app>/base/                    #   {kustomization,namespace,repository,helmrelease}.yaml
@@ -156,13 +156,12 @@ crypto-lakehouse/apps/batcher/overlays/test/          # was deploy/overlays/batc
 
 ```
 flux-system  (bootstrap → clusters/homelab/)
-  ├─ infra/{cert-manager, external-secrets, longhorn, cloudnative-pg,
+  ├─ infra/{cert-manager, longhorn, cloudnative-pg,
   │        tailscale-operator, keda, descheduler, arc-controller}
   │        wait: true; HelmRelease keda-add-ons-http dependsOn HelmRelease keda
-  ├─ infra/eso-store       dependsOn: infra/external-secrets
   ├─ infra/tls             dependsOn: infra/cert-manager
   ├─ infra/proxy-classes   dependsOn: infra/tailscale-operator   # backs 10 Ingresses
-  ├─ infra/postgres        dependsOn: infra/cloudnative-pg + infra/eso-store
+  ├─ infra/postgres        dependsOn: infra/cloudnative-pg
   ├─ infra/longhorn-config dependsOn: infra/longhorn
   └─ apps/*                dependsOn: the specific infra/* layers above, plus app-to-app below
 ```
@@ -171,10 +170,10 @@ Per-app `dependsOn` edges (from grep across the 3 repos — these are what break
 
 | App | dependsOn | Cross-repo? |
 |---|---|---|
-| `monitoring`, `garage`, `nextcloud`, `vikunja`, `renovate` | `infra/eso-store` (`bitwarden-secretsmanager` ClusterSecretStore) | no |
+| ~~`monitoring`, `garage`, `nextcloud`, `vikunja`, `renovate` → `infra/eso-store`~~ | **gone with ESO**: those apps now carry their own age-encrypted `Secret`, so there is no store layer to wait for | no |
 | `nextcloud`, `oxicloud`, `vikunja` | `infra/postgres` | no |
 | every tailed Ingress | `infra/proxy-classes` | no |
-| `openwebui` (myai) | `infra/postgres`, `infra/eso-store` | **yes** |
+| `openwebui` (myai) | `infra/postgres` | **yes** |
 | `lakekeeper` | `infra/postgres` (`pg-cluster-rw/ro.cnpg-system` + its ExternalSecrets) | **yes** |
 | `arroyo` | `infra/postgres`, `nats`, `lakekeeper` | **yes** |
 | `risingwave` | `infra/postgres`, `garage`, `lakekeeper` | **yes** |
@@ -341,15 +340,20 @@ it is recorded rather than left implicit.
   `sops -d <file> | kubectl apply --dry-run=server -f -`. And the age key cannot come from Git,
   so it joins the deploy key as a manual bootstrap artifact plus an offline backup.
 
-  **Not yet reconciled with the rest of this document.** The *mechanism* is settled: secret
-  content goes into Git as age-encrypted `Secret`s. What is still undecided is whether ESO and
-  Bitwarden retire outright. ExternalSecrets are therefore still assumed in
-  §2.1 (`infrastructure/configs/secret-stores/`), §2.3 (`infra/eso-store` and the per-app
-  `dependsOn` rows), §4 (waves 2 and 2b) and §6. Deciding that SOPS replaces ESO outright
-  deletes a whole layer of `dependsOn` edges and removes Bitwarden from the apps' runtime path —
-  which is worth weighing on its own terms: an `externalsecret/vikunja` refresh failure against
-  `bitwarden-sdk-server` is a real, observed event. Until that call is made, both pipelines
-  exist and only the probe demonstrates the SOPS one.
+  **Decided 2026-11-01: SOPS replaces ESO outright.** No `infra/eso-store`, no
+  `infrastructure/configs/secret-stores/`, and `external-secrets` is retired rather than adopted —
+  it never enters the wave list. Bitwarden leaves the apps' runtime path, which the observed
+  `externalsecret/vikunja` refresh failure against `bitwarden-sdk-server` argues for on its own
+  terms. Consequence to accept with open eyes: **the live Secret value at import time becomes the
+  source of truth.** Rotations in Bitwarden afterwards propagate to nothing; a secret is changed
+  by editing its sops file. `scripts/secret-import.sh` is the import path, and the per-secret
+  retirement sequence is in the new phase 5b — the part that bites is that
+  `creationPolicy: Owner` puts a controller `ownerReference` on the Secret, so deleting the
+  ExternalSecret garbage-collects it **even with `deletionPolicy: Retain`, which all 21 of them
+  already have**. Two more things the first import caught: the API rejects a label emitted as a
+  YAML bool, so `cnpg.io/reload: "true"` must stay quoted (it is functional — CNPG watches it),
+  and `reconcile.external-secrets.io/*` labels plus the `data-hash` annotation are dropped on the
+  way in while the file keeps everything else the live object had.
 * **No `apps/<app>/envs/<env>` per app.** One cluster; the overlay dir is per-cluster
   (`apps/homelab/`), created only when an app needs patching. Full staging/prod machinery for
   a single cluster would be cargo cult.
@@ -525,8 +529,8 @@ Application is gone, so removing it is cleanup, not a prerequisite.
 |---|---|---|
 | 1 | `ntfy` ✅, `ddg-search` (cross-repo, not started) | only app with no secret and no operator; drills adoption + the `apps/<app>/base` wiring with the smallest possible blast radius |
 | 1b | `cilium` ✅ — LB IP pool only, **was not in the original wave list** | cluster-scoped and trivially in sync; the CNI itself is installed with `cilium install`, outside Git either way |
-| 2 | `descheduler` ✅ — first Helm release, adopted by take-ownership with no annotations at all — then `external-secrets` + `infra/eso-store`, `cert-manager` + `infra/tls`, `tailscale-operator` + `infra/proxy-classes` | establishes the `infra/*` pattern and the config-layer `dependsOn` edges the rest of the cluster needs |
-| 2b | `vikunja` ✅, `garage` ✅ — both still ESO-backed, and neither has `dependsOn` on `infra/eso-store` because that layer does not exist as a Flux object yet | plain manifests, but both carry ExternalSecrets, so they must follow `infra/eso-store` |
+| 2 | `descheduler` ✅ — first Helm release, adopted by take-ownership with no annotations at all — then `cert-manager` + `infra/tls`, `tailscale-operator` + `infra/proxy-classes` | establishes the `infra/*` pattern and the config-layer `dependsOn` edges the rest of the cluster needs. `external-secrets` is **not** here: it retires (phase 5b) |
+| 2b | `vikunja` ✅, `garage` ✅ — both adopted, both still ESO-backed; each converts its secrets when phase 5b reaches it (`vikunja` also carries the `cnpg-system` half of its pair) | plain manifests, already Flux-owned; nothing here depends on a store layer any more |
 | 3 | `cloudnative-pg` → then `infra/postgres` (Clusters + their ExternalSecrets) | operator first; verify `pg-cluster` healthy before its CRs move |
 | 4 | `keda`(+`keda-add-ons-http`), `nats`, `arc-controller`, both `arc` scale-sets | stateful-adjacent; ARC is your CI, keep one runner working |
 | 5 | `monitoring` (3 HRs), `renovate`, `nextcloud`, `oxicloud`, `openwebui`, `graphiti` | biggest values files, cross-repo (myai) wiring proven here |
@@ -550,6 +554,26 @@ Two rules the wave order is built around:
 `docs/content/cicd/_index.md`, `docs/content/cicd/argocd/_index.md` → `flux/`. Record resource
 before/after in `docs/content/monitoring/`: Argo here is 6 workloads pinning 4.5 CPU / 4.5 Gi
 of limits per replica.
+
+**Phase 5b — retire External Secrets.** Per app, in the same sitting as its adoption, so no Secret
+is ever unmigrated:
+
+```bash
+scripts/secret-import.sh <ns> <secret> apps/<app>/base/secret-<purpose>.yaml   # dump + age + round-trip check
+sops -d apps/<app>/base/secret-<purpose>.yaml | kubectl diff -f -              # must be empty
+# commit + push, let Flux apply it, confirm Ready
+kubectl -n <ns> patch secret <secret> -p '{"metadata":{"ownerReferences":null}}'
+kubectl -n <ns> delete externalsecret <es-name>
+```
+
+Verify after each: Secret `uid` unchanged, `kubectl -n <ns> get secret <secret> -o jsonpath='{.data}'`
+byte-identical to the pre-import dump, app healthy. The seven CNPG role secrets
+(`vikunja`, `nextcloud-db`, `openwebui-db`, `oxicloud-db`, `arroyo-metastore-secret`,
+`lakekeeper-secret`, `rw-metastore-secret`) exist as a pair in `cnpg-system` **and** the app
+namespace with identical data — both halves move with the app, or neither moves. Once the last
+ExternalSecret is gone: delete the `bitwarden-secretsmanager` ClusterSecretStore, then the
+`external-secrets` release and `bitwarden-sdk-server`, and remove Bitwarden credentials from the
+cluster entirely.
 
 **Phase 6 — decommission Argo.**
 1. `grep -rn "argocd" base/ ../myai/base ../crypto-lakehouse/deploy` → clean.
@@ -616,7 +640,8 @@ failed quietly.**
 | `apps/homelab/` overlay listing bases | stands in for a real env dir | permanent, but stays thin: an entry only when an app needs a patch |
 | `clusters/homelab/dev/` (unreferenced) | keeps `batcher-test` inert | permanent by design |
 | `secret/sops-age` in `flux-system` | decrypts SOPS-in-Git secrets (§2.9) | permanent, but **can never come from Git** — bootstrap artifact alongside the deploy key, with an offline backup |
-| `apps/vikunja/base/secret-probe.yaml` + `decryption` on the vikunja Kustomization | reference implementation proving the §2.9 pipeline | deleted once the ExternalSecrets question in §2.9 is settled |
+| `apps/vikunja/base/secret-probe.yaml` + `decryption` on the vikunja Kustomization | reference implementation proving the §2.9 pipeline | **exit reached** — §2.9 decided; delete it once vikunja carries its real secret, since `decryption` stays either way |
+| `scripts/secret-import.sh` | live Secret → age-encrypted manifest, for every app leaving ESO (phase 5b) | delete once the `external-secrets` release is gone; nothing imports after that |
 
 ---
 

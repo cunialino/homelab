@@ -135,15 +135,9 @@ Working pipeline: `age-keygen` → `.sops.yaml` (`encrypted_regex: ^(data|string
    sync after merge.
 3. ~~Commit the plan and this log.~~ Done (`660b5b9`); both had survived a migration branch and
    two incidents while untracked.
-4. **Retiring ESO** — the undecided half of the §2.9 decision. SOPS+age itself is settled and
-   proven; the 21 existing ExternalSecrets are untouched and none of them has to convert. Two
-   blocking facts: `creationPolicy: Owner` puts
-   an `ownerReference` on each Secret, so deleting an ExternalSecret garbage-collects it —
-   cutover must be strip-ownerRef → Flux adopts → delete ES. And the same Bitwarden item feeds
-   two Secrets for DB creds (`cnpg-system/vikunja` role + `vikunja/vikunja` app, both
-   `1d29191d-f9b9-…`; same pattern for nextcloud, oxicloud, arroyo, risingwave, lakekeeper,
-   openwebui), so those must move as a set with `infra/postgres`, not per app. Converting
-   cannot read Bitwarden; values are only reachable from live Secrets.
+4. **ESO retirement — decided** (plan §2.9): SOPS+age only, `external-secrets` retired rather than
+   adopted, no `infra/eso-store` layer. Inventory and the verified import path in §5.4; per-secret
+   sequence is plan phase 5b. Nothing converted yet — the vikunja pair is the next pilot.
 5. 14 homelab apps left as Helm releases. `descheduler` is adopted and verified (§5.3), which
    makes the default path one `apply` per release rather than ~300 annotations — but only for
    releases whose live state equals the chart render. OxiCloud additionally needs
@@ -268,6 +262,39 @@ only the controller owns the sync CR) and went `Ready` on the same revision as t
 present, and afterwards CronJob `9152b18e…`, ServiceAccount `80e58428…`, ConfigMap `dda127cf…`,
 ClusterRole `387878ba…`, ClusterRoleBinding `8a3cbae5…` all identical to before; Helm still
 revision 1 `deployed`; 25 Applications left in Argo.
+
+### 5.4 ESO retirement: inventory, and what the first import caught
+
+Inventory (read-only, 21 ExternalSecrets, all `bitwarden-secretsmanager`, all `Ready`):
+`arc-runners/arcpat`, `argocd/repo-homelab`, `arroyo/{arroyo-api-key,arroyo-metastore-secret,
+rustfs-secret}`, `crypto-batcher-test/garage-s3-credentials`, `garage/garage-secret`,
+`lakekeeper/lakekeeper-secret`, `monitoring/alertmanager-telegram`, `openwebui/openwebui-db`,
+`oxicloud/oxicloud-db`, `renovate/arcpat`, `tailscale/tailscale-oauth-external`,
+`vikunja/vikunja`, plus seven in `cnpg-system`: `vikunja`, `nextcloud-db`, `openwebui-db`,
+`oxicloud-db`, `arroyo-metastore-secret`, `lakekeeper-secret`, `rw-metastore-secret`. Those seven
+are the *other half* of an app's pair with byte-identical data, so they move with the app or not
+at all — and the values are only reachable from the live Secrets, never from Bitwarden.
+
+All 21 have `deletionPolicy: Retain`, which is **not** the protection it looks like: every live
+Secret carries `ownerReferences: [{kind: ExternalSecret, controller: true,
+blockOwnerDeletion: true}]`, so the API garbage-collects the Secret when its ExternalSecret goes
+regardless. Strip the ownerReference, let Flux apply identical content, then delete.
+
+`scripts/secret-import.sh <ns> <secret> <out.yaml>` dumps → strips ESO bookkeeping → age-encrypts
+via `nix run nixpkgs#sops` → decrypts and compares every key against the live value before
+returning. Verified on `vikunja/vikunja`: metadata stays plaintext with `cnpg.io/reload` intact,
+`sops -d | kubectl diff -f -` is empty, so Flux would write byte-identical data. Three things only
+came out by running it:
+
+* the API rejects `cnpg.io/reload: true` — labels must be strings, so every label/annotation value
+  goes through `@json`. That functional label has to survive or CNPG stops reloading on change;
+* `kubectl apply`/`diff` **on the encrypted file itself** fails (`error decoding from json:
+  illegal base64 data`) because kubectl tries to write the `sops:` block into
+  `last-applied-configuration`. Every probe must decrypt first: `sops -d f | kubectl diff -f -`.
+  Same root cause as plan §2.9's "flux diff is blind to encrypted values", and this is the louder
+  failure mode of it;
+* sops re-indents to 4 spaces. Valid YAML, just not the repo's style — worth knowing before
+  diffing a re-encrypted file looking for a real change.
 
 ## 6. Cluster noise observed, unrelated to the migration
 
