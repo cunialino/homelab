@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# The CNPG custom resources the operator acts on: one Cluster, one Database per app, the role
+# Secrets and the scrape config. Everything here lives in cnpg-system and depends on the operator
+# being installed first (the cnpg.io CRDs come from its chart), so infra/postgres dependsOn
+# infra/cloudnative-pg.
+#
+# role-secret-<app>.yaml are SOPS-encrypted Secrets; secret_<app>.yaml are still ExternalSecrets.
+# Every credential here has a second half in the owning app's namespace, so a password rotation edits
+# both files - converting one half alone would let Bitwarden move one copy and Git the other.
+resources:
+  - cluster.yaml
+  - arroyo.yaml
+  - lakekeeper.yaml
+  - oxicloud.yaml
+  - risingwave.yaml
+  - vikunja.yaml
+  - secret_arroyo.yaml
+  - role-secret-lakekeeper.yaml
+  - secret_oxicloud.yaml
+  - secret_risingwave.yaml
+  - podmonitor.yaml
+  - prometheusrule.yaml

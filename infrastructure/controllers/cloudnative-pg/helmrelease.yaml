@@ -1,0 +1,27 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cloudnative-pg
+  namespace: cnpg-system
+spec:
+  interval: 1h
+  timeout: 5m
+  # The Helm release name stays "cnpg-stack" (Argo's Application name) because this chart derives
+  # every object name from it: rendering as "cloudnative-pg" produces a parallel 469-line object set
+  # next to the live one instead of adopting it.
+  releaseName: cnpg-stack
+  chart:
+    spec:
+      chart: cloudnative-pg
+      # pinned, never a semver range: Renovate's flux manager bumps this field and nothing else
+      version: 0.29.1
+      sourceRef:
+        kind: HelmRepository
+        name: cloudnative-pg
+        namespace: cnpg-system
+  install:
+    strategy:
+      name: RetryOnFailure
+  upgrade:
+    strategy:
+      name: RetryOnFailure

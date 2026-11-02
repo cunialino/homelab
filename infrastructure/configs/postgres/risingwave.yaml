@@ -1,10 +1,11 @@
 apiVersion: postgresql.cnpg.io/v1
 kind: Database
 metadata:
-  name: lakekeeper
+  name: risingwave
+  namespace: cnpg-system
 spec:
-  name: lakekeeper
-  owner: lakekeeper
+  name: risingwave
+  owner: risingwave
   cluster:
     name: pg-cluster
   extensions:

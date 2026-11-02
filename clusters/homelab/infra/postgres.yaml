@@ -1,0 +1,25 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: postgres
+  namespace: flux-system
+spec:
+  interval: 30m
+  retryInterval: 2m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./infrastructure/configs/postgres
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+    - name: cloudnative-pg
+  prune: true
+  # transition scaffolding: safe rollback while Argo still owns this app
+  deletionPolicy: Orphan
+  # No wait/healthChecks: the Cluster's own readiness is reported by CNPG and gating on it here
+  # would block the layer on every instance rollout. infra/cloudnative-pg already gates on the
+  # operator, which is the dependency that actually matters (the cnpg.io CRDs come from its chart).
