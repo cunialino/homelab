@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Longhorn CRs the operator acts on: per-node tuning, the recurring backup jobs and the storage
+# classes. No namespace transformer: StorageClass is cluster-scoped while Node, RecurringJob and the
+# dashboard Ingress live in longhorn-system, so every namespaced resource states it itself.
+resources:
+  - nodes.yaml
+  - maintenance.yaml
+  - wd_black.yaml
+  - wd_black_freq.yaml
+  - ingress.yaml

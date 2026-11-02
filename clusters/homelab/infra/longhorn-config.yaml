@@ -1,0 +1,20 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: longhorn-config
+  namespace: flux-system
+spec:
+  interval: 30m
+  retryInterval: 2m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./infrastructure/configs/longhorn
+  dependsOn:
+    - name: longhorn
+  prune: true
+  # transition scaffolding: safe rollback while Argo still owns this app
+  deletionPolicy: Orphan
+  # No wait/healthChecks: these are inputs the operator consumes (node tuning, backup jobs, storage
+  # classes); nothing here reports a readiness of its own.

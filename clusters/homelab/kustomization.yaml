@@ -7,6 +7,8 @@ resources:
   - infra/cloudnative-pg.yaml
   - infra/postgres.yaml
   - infra/keda.yaml
+  - infra/longhorn.yaml
+  - infra/longhorn-config.yaml
   - infra/nats.yaml
   - infra/tailscale-operator.yaml
   - infra/proxy-classes.yaml
