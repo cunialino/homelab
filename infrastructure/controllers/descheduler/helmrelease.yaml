@@ -1,0 +1,67 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: descheduler
+  namespace: kube-system
+spec:
+  interval: 1h
+  timeout: 5m
+  # Argo installed this as release "descheduler-affinity-sync" (its Application name) and every
+  # object name derives from it. HelmRelease would otherwise default to "<targetNamespace>-<name>"
+  # or "<name>", so dropping this pin would create a second release alongside the live one.
+  releaseName: descheduler-affinity-sync
+  chart:
+    spec:
+      chart: descheduler
+      # pinned, never a semver range: Renovate's flux manager bumps this field and nothing else
+      version: 0.36.0
+      sourceRef:
+        kind: HelmRepository
+        name: descheduler
+        namespace: kube-system
+  install:
+    strategy:
+      name: RetryOnFailure
+  upgrade:
+    strategy:
+      name: RetryOnFailure
+  values:
+    kind: CronJob
+    schedule: "*/15 * * * *"
+    deschedulerPolicy:
+      maxNoOfPodsToEvictTotal: 10
+      profiles:
+        - name: AffinityAndBalance
+          pluginConfig:
+            - name: DefaultEvictor
+              args:
+                nodeFit: true
+            - name: RemovePodsViolatingInterPodAntiAffinity
+              args: {}
+            - name: RemovePodsViolatingNodeAffinity
+              args:
+                nodeAffinityType:
+                  - requiredDuringSchedulingIgnoredDuringExecution
+            - name: LowNodeUtilization
+              args:
+                thresholds:
+                  cpu: 20
+                  memory: 20
+                  pods: 20
+                targetThresholds:
+                  cpu: 50
+                  memory: 50
+                  pods: 50
+            - name: RemovePodsViolatingTopologySpreadConstraint
+              args:
+                constraints:
+                  - ScheduleAnyway
+          plugins:
+            balance:
+              enabled:
+                - LowNodeUtilization
+                - RemovePodsViolatingTopologySpreadConstraint
+            deschedule:
+              enabled:
+                - RemovePodsViolatingInterPodAntiAffinity
+                - RemovePodsViolatingNodeAffinity

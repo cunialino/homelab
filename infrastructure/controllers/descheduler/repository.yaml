@@ -1,0 +1,11 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: descheduler
+  namespace: kube-system
+spec:
+  interval: 1h
+  timeout: 3m
+  # No OCI distribution for this chart (probed 2026-11-01: registry.k8s.io and
+  # ghcr.io/kubernetes-sigs both 404), so the index-based source stays.
+  url: https://kubernetes-sigs.github.io/descheduler/

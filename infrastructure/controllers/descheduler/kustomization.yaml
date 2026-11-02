@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# No namespace.yaml on purpose: kube-system predates this repo and Flux must not be able to
+# prune the control-plane namespace. The HelmRelease carries the namespace instead, and Helm
+# stamps it on the namespaced objects, so no kustomize namespace transformer is needed either
+# (a transformer would silently stamp kube-system onto the ClusterRole and ClusterRoleBinding).
+resources:
+  - repository.yaml
+  - helmrelease.yaml
