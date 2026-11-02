@@ -1,0 +1,51 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: keda
+  namespace: keda
+spec:
+  interval: 1h
+  timeout: 5m
+  # Argo rendered this chart as release "keda"; pinning keeps Helm adopting the live objects.
+  releaseName: keda
+  chart:
+    spec:
+      chart: keda
+      # pinned, never a semver range: Renovate's flux manager bumps this field and nothing else
+      version: 2.21.0
+      sourceRef:
+        kind: HelmRepository
+        name: kedacore
+        namespace: keda
+  install:
+    strategy:
+      name: RetryOnFailure
+  upgrade:
+    strategy:
+      name: RetryOnFailure
+  values:
+    crds:
+      install: true
+    
+    resources:
+      operator:
+        limits:
+          cpu: 1
+          memory: 1000Mi
+        requests:
+          cpu: 100m
+          memory: 100Mi
+      metricServer:
+        limits:
+          cpu: 1
+          memory: 1000Mi
+        requests:
+          cpu: 100m
+          memory: 100Mi
+      webhooks:
+        limits:
+          cpu: 1
+          memory: 1000Mi
+        requests:
+          cpu: 100m
+          memory: 100Mi

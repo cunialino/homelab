@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# No namespace transformer: both charts install CRDs (ScaledObject, ClusterTriggerAuthentication, and
+# the add-ons HTTP* kinds) plus cluster-scoped RBAC, which a transformer would wrongly namespace.
+# keda-add-ons-http is a second HelmRelease in the same namespace, sharing one HelmRepository.
+resources:
+  - namespace.yaml
+  - repository.yaml
+  - helmrelease.yaml
+  - helmrelease-http.yaml
