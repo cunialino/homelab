@@ -1,0 +1,15 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmChart
+metadata:
+  name: oxicloud
+  namespace: oxicloud
+spec:
+  interval: 1h
+  # No namespace here: a HelmChart reads a Source in its own namespace and the API rejects the field.
+  sourceRef:
+    kind: GitRepository
+    name: oxicloud
+  # A path inside the GitRepository, not a chart name from an index.
+  chart: ./charts/oxicloud
+  # No "version" constraint: the tag in gitrepository.yaml is the pin, and constraining on the
+  # chart version too (0.2.1 behind tag v0.9.3) would give two things to keep in step for no gain.

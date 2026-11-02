@@ -1,0 +1,21 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: oxicloud
+  namespace: oxicloud
+spec:
+  interval: 1h
+  timeout: 3m
+  # Upstream ships its chart in-tree at charts/oxicloud and publishes it to no HTTP or OCI registry,
+  # so the chart has to be pulled from the repository itself.
+  url: https://github.com/AtalayaLabs/OxiCloud.git
+  # A tag rather than a branch: this is what holds the deployment still. Flux re-resolves the ref on
+  # every interval, but the commit behind a tag never moves, so changing what runs means editing the
+  # tag below.
+  ref:
+    tag: v0.9.3
+  # The repository is the whole Rust workspace; only charts/ is ever read. Without this the artifact
+  # source-controller stores and re-downloads is the entire source tree.
+  ignore: |
+    /*
+    !/charts

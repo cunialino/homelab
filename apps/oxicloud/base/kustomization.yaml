@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# The chart installs the StatefulSet, its Services, the Ingress and its own Secrets in oxicloud, so
+# there is nothing else to ship here. The database credential is not part of this layer: the
+# oxicloud-db Secret comes from infrastructure/configs/postgres.
+resources:
+  - namespace.yaml
+  - gitrepository.yaml
+  - helmchart.yaml
+  - helmrelease.yaml
