@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# No namespace transformer: the controller chart installs ClusterRoles and ClusterRoleBindings.
+# Two HelmReleases, one per chart; crypto-lakehouse has its own scale set in its own repo and is
+# deliberately not managed here.
+resources:
+  - namespace.yaml
+  - repository.yaml
+  - helmrelease-controller.yaml
+  - helmrelease-scale-set.yaml
+  - secret-auth.yaml

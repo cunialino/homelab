@@ -1,0 +1,28 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: arc-runners
+  namespace: flux-system
+spec:
+  interval: 30m
+  retryInterval: 2m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./infrastructure/controllers/arc-runners
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  prune: true
+  # transition scaffolding: safe rollback while Argo still owns this release
+  deletionPolicy: Orphan
+  wait: true
+  # Only the controller is gated: an AutoscalingRunnerSet reports ready only once a runner pod has
+  # started, and runners scale to zero between jobs, so it would flap.
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: arc-runners-gha-rs-controller
+      namespace: arc-runners
