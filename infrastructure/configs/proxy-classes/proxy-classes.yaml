@@ -1,12 +1,10 @@
-apiVersion: tailscale.com/v1alpha1                     
-kind: ProxyClass                                       
+apiVersion: tailscale.com/v1alpha1
+kind: ProxyClass
 metadata:
   name: tailscale-small
-  annotations:
-    argocd.argoproj.io/sync-wave: "9" 
-spec:                                                  
-  statefulSet:                                         
-    pod:                                               
+spec:
+  statefulSet:
+    pod:
       tailscaleContainer:
         resources:
           requests:
@@ -20,8 +18,6 @@ apiVersion: tailscale.com/v1alpha1
 kind: ProxyClass
 metadata:
   name: tailscale-stream
-  annotations:
-    argocd.argoproj.io/sync-wave: "9"
 spec:
   statefulSet:
     pod:
@@ -33,4 +29,3 @@ spec:
           limits:
             cpu: "1"
             memory: "512Mi"
-

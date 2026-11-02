@@ -3,6 +3,8 @@ kind: Kustomization
 resources:
   - flux-system
   - infra/descheduler.yaml
+  - infra/tailscale-operator.yaml
+  - infra/proxy-classes.yaml
   - apps/cilium.yaml
   - apps/garage.yaml
   - apps/ntfy.yaml

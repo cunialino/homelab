@@ -1,0 +1,20 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: proxy-classes
+  namespace: flux-system
+spec:
+  interval: 30m
+  retryInterval: 2m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./infrastructure/configs/proxy-classes
+  dependsOn:
+    - name: tailscale-operator
+  prune: true
+  # transition scaffolding: safe rollback while Argo still owns this app
+  deletionPolicy: Orphan
+  # No wait/healthChecks: ProxyClass is consumed by the operator when it builds a Proxy
+  # StatefulSet, so there is nothing here that reports "ready".

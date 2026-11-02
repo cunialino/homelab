@@ -1,0 +1,32 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: tailscale-operator
+  namespace: tailscale
+spec:
+  interval: 1h
+  timeout: 5m
+  # Argo rendered this chart under the release name "tailscale-operator" and every object name
+  # derives from it (operator, tailscale-operator, proxies). Pinning keeps Helm adopting those
+  # objects instead of installing a parallel set alongside them.
+  releaseName: tailscale-operator
+  chart:
+    spec:
+      chart: tailscale-operator
+      # pinned, never a semver range: Renovate's flux manager bumps this field and nothing else.
+      # 1.104.4 exists upstream; moving to it is a deliberate operator upgrade, not a side effect
+      # of the migration.
+      version: 1.104.1
+      sourceRef:
+        kind: HelmRepository
+        name: tailscale
+        namespace: tailscale
+  install:
+    strategy:
+      name: RetryOnFailure
+  upgrade:
+    strategy:
+      name: RetryOnFailure
+  values:
+    oauth:
+      secretName: operator-oauth
