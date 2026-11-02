@@ -1,0 +1,37 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: monitoring
+  namespace: flux-system
+spec:
+  interval: 30m
+  retryInterval: 2m
+  timeout: 15m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./apps/monitoring/base
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  prune: true
+  # transition scaffolding: safe rollback while Argo still owns this app
+  deletionPolicy: Orphan
+  wait: true
+  # The three things that have to be up for the stack to mean anything: the operator that drives the
+  # Prometheus/Alertmanager CRs, the Prometheus itself, and the dashboard. Their names embed the
+  # Helm release name ("prometheus"), which is why releaseName is pinned in the HelmReleases.
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: prometheus-kube-prometheus-operator
+      namespace: monitoring
+    - apiVersion: apps/v1
+      kind: StatefulSet
+      name: prometheus-prometheus-kube-prometheus-prometheus
+      namespace: monitoring
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: prometheus-grafana
+      namespace: monitoring

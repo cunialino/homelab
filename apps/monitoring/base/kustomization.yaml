@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Three HelmReleases from two chart repositories: kube-prometheus-stack (release "prometheus"), loki
+# and alloy. No namespace transformer: the stack installs ClusterRoles, PrometheusRules and
+# AlertmanagerConfigs alongside namespaced workloads, so each plain manifest states its namespace.
+resources:
+  - namespace.yaml
+  - repository-prometheus.yaml
+  - repository-grafana.yaml
+  - helmrelease-prometheus.yaml
+  - helmrelease-loki.yaml
+  - helmrelease-alloy.yaml
+  - dashboard-elcunhalo.yaml
+  - ingress.yaml
+  - prometheus-lan-service.yaml
+  - secret-alertmanager.yaml

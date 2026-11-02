@@ -14,6 +14,7 @@ resources:
   - infra/proxy-classes.yaml
   - apps/cilium.yaml
   - apps/garage.yaml
+  - apps/monitoring.yaml
   - apps/ntfy.yaml
   - apps/renovate.yaml
   - apps/vikunja.yaml
