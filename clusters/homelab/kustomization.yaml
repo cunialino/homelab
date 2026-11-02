@@ -8,4 +8,5 @@ resources:
   - apps/cilium.yaml
   - apps/garage.yaml
   - apps/ntfy.yaml
+  - apps/renovate.yaml
   - apps/vikunja.yaml

@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# No namespace transformer: the chart installs a ClusterRole and ClusterRoleBinding, and a
+# transformer would stamp a namespace onto them. The HelmRelease carries the namespace instead.
+resources:
+  - namespace.yaml
+  - repository.yaml
+  - helmrelease.yaml
+  - secret-token.yaml
