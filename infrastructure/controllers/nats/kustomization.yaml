@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# No namespace transformer: nack installs the JetStreamClusterMode and UserSecret CRDs plus
+# cluster-scoped RBAC. Two HelmReleases share one HelmRepository: nack is the operator, nats-cluster
+# is the actual 3-node JetStream cluster (the Application set distinct Helm release names for each).
+resources:
+  - namespace.yaml
+  - repository.yaml
+  - helmrelease-nack.yaml
+  - helmrelease-cluster.yaml
