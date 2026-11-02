@@ -21,13 +21,16 @@ ns=$1; name=$2; out=$3
 # is rejected by the API as a bool, and annotations regularly contain colons.
 keep_labels=$(kubectl -n "$ns" get secret "$name" -o json \
   | jq -r '[(.metadata.labels // {}) | to_entries[]
-            | select(.key | startswith("reconcile.external-secrets.io") | not)]
+            | select(.key | startswith("reconcile.external-secrets.io")
+                             or startswith("kustomize.toolkit.fluxcd.io")
+                             or startswith("argocd.argoproj.io") | not)]
            | map("\(.key): \(.value | @json)") | join("\n")')
 
 keep_annotations=$(kubectl -n "$ns" get secret "$name" -o json \
   | jq -r '[(.metadata.annotations // {}) | to_entries[]
             | select(.key | startswith("reconcile.external-secrets.io")
-                             or startswith("kubectl.kubernetes.io") | not)]
+                             or startswith("kubectl.kubernetes.io")
+                             or startswith("argocd.argoproj.io") | not)]
            | map("\(.key): \(.value | @json)") | join("\n")')
 
 secret_type=$(kubectl -n "$ns" get secret "$name" -o jsonpath='{.type}')

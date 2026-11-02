@@ -3,5 +3,6 @@ kind: Kustomization
 resources:
   - flux-system
   - apps/cilium.yaml
+  - apps/garage.yaml
   - apps/ntfy.yaml
   - apps/vikunja.yaml
