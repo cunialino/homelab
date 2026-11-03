@@ -5,6 +5,7 @@ resources:
   - infra/descheduler.yaml
   - infra/arc-runners.yaml
   - infra/cloudnative-pg.yaml
+  - infra/sources.yaml
   - infra/postgres.yaml
   - infra/keda.yaml
   - infra/longhorn.yaml
@@ -14,6 +15,7 @@ resources:
   - infra/proxy-classes.yaml
   - apps/cilium.yaml
   - apps/garage.yaml
+  - apps/lakekeeper.yaml
   - apps/monitoring.yaml
   - apps/ntfy.yaml
   - apps/oxicloud.yaml

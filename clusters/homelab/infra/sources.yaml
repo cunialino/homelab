@@ -1,0 +1,20 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: sources
+  namespace: flux-system
+spec:
+  interval: 30m
+  retryInterval: 2m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./infrastructure/sources
+  prune: true
+  # transition scaffolding: safe rollback while Argo still owns this app
+  deletionPolicy: Orphan
+  # No wait/healthChecks: these are Source objects, they report an artifact rather than readiness.
+  #
+  # Every Kustomization that reads a repository other than homelab dependsOn this one, so the Source
+  # exists before those Kustomizations first try to resolve their artifact.

@@ -1,0 +1,33 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: lakekeeper
+  namespace: flux-system
+spec:
+  interval: 30m
+  retryInterval: 2m
+  timeout: 10m
+  # Content lives in the crypto-lakehouse repository, not here: homelab keeps only this pointer plus
+  # the Source it reads. Everything about the app itself stays with the app.
+  sourceRef:
+    kind: GitRepository
+    name: crypto-lakehouse
+  path: ./clusters/homelab/apps/lakekeeper
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+    - name: sources
+    # The install job writes to the lakekeeper database and the pod reads its role Secret, both of
+    # which homelab's postgres layer produces.
+    - name: postgres
+  prune: true
+  # transition scaffolding: safe rollback while Argo still owns this app
+  deletionPolicy: Orphan
+  wait: true
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: lakekeeper
+      namespace: lakekeeper

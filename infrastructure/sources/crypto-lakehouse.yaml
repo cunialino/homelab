@@ -1,0 +1,17 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: crypto-lakehouse
+  namespace: flux-system
+spec:
+  interval: 5m
+  timeout: 3m
+  url: https://github.com/cunialino/crypto-lakehouse.git
+  ref:
+    branch: main
+  # The repository also holds the Rust sources and a test stack. Only the manifests are ever read,
+  # and without this the artifact source-controller clones, tars and serves the whole workspace on
+  # every poll.
+  ignore: |
+    /*
+    !/clusters
