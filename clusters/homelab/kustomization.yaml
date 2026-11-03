@@ -14,6 +14,7 @@ resources:
   - infra/tailscale-operator.yaml
   - infra/proxy-classes.yaml
   - apps/cilium.yaml
+  - apps/collector.yaml
   - apps/garage.yaml
   - apps/lakekeeper.yaml
   - apps/monitoring.yaml
