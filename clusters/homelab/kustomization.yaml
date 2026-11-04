@@ -13,6 +13,7 @@ resources:
   - infra/nats.yaml
   - infra/tailscale-operator.yaml
   - infra/proxy-classes.yaml
+  - apps/arc-runners-crypto.yaml
   - apps/batcher.yaml
   - apps/cilium.yaml
   - apps/collector.yaml
