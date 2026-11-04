@@ -31,15 +31,6 @@ spec:
 
   managed:
     roles:
-      - name: risingwave
-        ensure: present
-        comment: role used for risingwave
-        login: true
-        superuser: false
-        connectionLimit: -1
-        inherit: true
-        passwordSecret:
-          name: rw-metastore-secret
       - name: vikunja
         ensure: present
         comment: role used for vikunja

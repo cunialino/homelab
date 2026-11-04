@@ -5,8 +5,9 @@ kind: Kustomization
 # being installed first (the cnpg.io CRDs come from its chart), so infra/postgres dependsOn
 # infra/cloudnative-pg.
 #
-# role-secret-<app>.yaml are SOPS-encrypted Secrets, one per managed role in cluster.yaml; anything
-# still named secret_<app>.yaml is an ExternalSecret and rotates through Bitwarden instead.
+# role-secret-<app>.yaml are SOPS-encrypted Secrets, one per managed role in cluster.yaml. Every
+# credential here is Git-only and Flux decrypts it at apply time; nothing in this layer reads an
+# external secret store any more.
 #
 # Each credential has a second half holding the same password in the owning app's namespace, because a
 # Secret can never be read across namespaces. That half lives with the app (for example
@@ -17,11 +18,9 @@ resources:
   - openwebui.yaml
   - lakekeeper.yaml
   - oxicloud.yaml
-  - risingwave.yaml
   - vikunja.yaml
   - role-secret-lakekeeper.yaml
   - role-secret-openwebui.yaml
   - role-secret-oxicloud.yaml
-  - secret_risingwave.yaml
   - podmonitor.yaml
   - prometheusrule.yaml
