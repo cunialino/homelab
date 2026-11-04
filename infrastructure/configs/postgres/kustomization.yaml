@@ -5,9 +5,13 @@ kind: Kustomization
 # being installed first (the cnpg.io CRDs come from its chart), so infra/postgres dependsOn
 # infra/cloudnative-pg.
 #
-# role-secret-<app>.yaml are SOPS-encrypted Secrets; secret_<app>.yaml are still ExternalSecrets.
-# Every credential here has a second half in the owning app's namespace, so a password rotation edits
-# both files - converting one half alone would let Bitwarden move one copy and Git the other.
+# role-secret-<app>.yaml are SOPS-encrypted Secrets, one per managed role in cluster.yaml; anything
+# still named secret_<app>.yaml is an ExternalSecret and rotates through Bitwarden instead.
+#
+# Each credential has a second half holding the same password in the owning app's namespace, because a
+# Secret can never be read across namespaces. That half lives with the app (for example
+# apps/oxicloud/base/secret-db.yaml), so rotating a password means editing both files: converting or
+# rotating one alone would let the two copies disagree.
 resources:
   - cluster.yaml
   - arroyo.yaml
@@ -19,7 +23,7 @@ resources:
   - secret_arroyo.yaml
   - role-secret-lakekeeper.yaml
   - role-secret-openwebui.yaml
-  - secret_oxicloud.yaml
+  - role-secret-oxicloud.yaml
   - secret_risingwave.yaml
   - podmonitor.yaml
   - prometheusrule.yaml

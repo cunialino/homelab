@@ -1,10 +1,13 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-# The chart installs the StatefulSet, its Services, the Ingress and its own Secrets in oxicloud, so
-# there is nothing else to ship here. The database credential is not part of this layer: the
-# oxicloud-db Secret comes from infrastructure/configs/postgres.
+# The chart installs the StatefulSet, its Services, the Ingress and its own Secrets in oxicloud.
+#
+# secret-db.yaml is the one credential the chart is not given: the DSN the StatefulSet reads at boot.
+# Its twin in cnpg-system is the CNPG managed-role credential and lives in
+# infrastructure/configs/postgres, because the operator can only write Secrets in its own namespace.
 resources:
   - namespace.yaml
   - gitrepository.yaml
   - helmchart.yaml
   - helmrelease.yaml
+  - secret-db.yaml

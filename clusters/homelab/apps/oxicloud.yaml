@@ -11,9 +11,13 @@ spec:
     kind: GitRepository
     name: flux-system
   path: ./apps/oxicloud/base
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
   dependsOn:
-    # The pod starts by reading the oxicloud-db Secret, which infrastructure/configs/postgres
-    # produces rather than this layer.
+    # The pod connects during startup, and the Database CR plus the matching role in cnpg-system are
+    # both produced by infrastructure/configs/postgres rather than this layer.
     - name: postgres
   prune: true
   # transition scaffolding: safe rollback while Argo still owns this app
