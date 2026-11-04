@@ -1,0 +1,16 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: myai
+  namespace: flux-system
+spec:
+  interval: 5m
+  timeout: 3m
+  url: https://github.com/cunialino/myai.git
+  ref:
+    branch: main
+  # The repository is a Nix flake with eval scripts, docs and model tooling. Only the manifests under
+  # clusters/ are ever read, so the artifact stays small instead of shipping the whole workspace.
+  ignore: |
+    /*
+    !/clusters
