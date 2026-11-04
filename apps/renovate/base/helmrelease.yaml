@@ -39,6 +39,10 @@ spec:
         memory: 512Mi
 
     renovate:
+      # Two things in here are easy to break and invisible when it happens:
+      #   * the config is strict JSON, so no comments inside it
+      #   * every manager needs explicit managerFilePatterns; flux defaults to gotk-components.yaml
+      #     only, which would leave every HelmRelease chart pin unwatched
       config: |
         {
           "platform": "github",
@@ -64,6 +68,11 @@ spec:
           "argocd": {
             "managerFilePatterns": ["/^(deploy\\/)?apps\\/.+\\.ya?ml$/"]
           },
+          "flux": {
+            "managerFilePatterns": [
+              "/^(apps|infrastructure|clusters)\\/.+\\.ya?ml$/"
+            ]
+          },
           "helm-values": {
             "managerFilePatterns": [
               "/(^|/)values\\.ya?ml$/",
@@ -75,7 +84,8 @@ spec:
           "kubernetes": {
             "managerFilePatterns": [
               "/^(deploy\\/)?base\\/.+\\.ya?ml$/",
-              "/^apps\\/[^/]+\\/base\\/.+\\.ya?ml$/"
+              "/^apps\\/[^/]+\\/base\\/.+\\.ya?ml$/",
+              "/^clusters\\/.+\\.ya?ml$/"
             ]
           },
           "docker-compose": {
@@ -94,6 +104,13 @@ spec:
               "matchManagers": ["cargo"],
               "matchRepositories": ["cunialino/homelab"],
               "enabled": false
+            },
+            {
+              "matchManagers": ["flux"],
+              "matchDatasources": ["helm"],
+              "registryAliases": {
+                "actions-runner-controller-charts": "oci://ghcr.io/actions/actions-runner-controller-charts"
+              }
             }
           ],
           "customManagers": [
@@ -110,8 +127,11 @@ spec:
             },
             {
               "customType": "regex",
-              "description": "Update ARC runner image in crypto-lakehouse Helm values",
-              "managerFilePatterns": ["/^deploy\\/base\\/runners\\/values\\.ya?ml$/"],
+              "description": "Update ARC runner image in inline HelmRelease values",
+              "managerFilePatterns": [
+                "/^clusters\\/homelab\\/apps\\/arc-runners-crypto\\/helmrelease\\.ya?ml$/",
+                "/^infrastructure\\/controllers\\/arc-runners\\/helmrelease-scale-set\\.ya?ml$/"
+              ],
               "matchStrings": [
                 "image:\\s+(?<depName>ghcr\\.io\\/actions\\/actions-runner):(?<currentValue>[^\\s]+)"
               ],
