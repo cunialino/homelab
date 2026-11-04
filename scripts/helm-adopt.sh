@@ -58,7 +58,11 @@ done <<< "$objects"
 
 echo
 if [[ $apply -eq 1 ]]; then
-  printf '%s\n' "${commands[@]}" | xargs -L1 sh -c
+  # Not `xargs sh -c`: that hands the line over in a way that silently drops arguments, so a command
+  # can fail with a bare kubectl usage message while the rest of the batch succeeds.
+  for cmd in "${commands[@]}"; do
+    $cmd
+  done
 else
   printf '%s\n' "${commands[@]}"
 fi
