@@ -56,7 +56,6 @@ spec:
           "semanticCommits": "enabled",
           "commitMessageTopic": "{{depName}}",
           "enabledManagers": [
-            "argocd",
             "flux",
             "helm-values",
             "kubernetes",
@@ -65,9 +64,6 @@ spec:
             "cargo",
             "custom.regex"
           ],
-          "argocd": {
-            "managerFilePatterns": ["/^(deploy\\/)?apps\\/.+\\.ya?ml$/"]
-          },
           "flux": {
             "managerFilePatterns": [
               "/^(apps|infrastructure|clusters)\\/.+\\.ya?ml$/"
