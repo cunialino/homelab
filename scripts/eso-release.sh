@@ -33,19 +33,22 @@ uid0=$(timeout 60 kubectl -n $ns get secret $name -o jsonpath='{.metadata.uid}')
 sha0=$(timeout 60 kubectl -n $ns get secret $name -o jsonpath='{.data}' | sha256sum | cut -c1-8)
 echo "before: uid=$uid0 data-sha=$sha0"
 
+# Order matters here: the ownerReference has to be gone before the ExternalSecret is, otherwise the
+# API server garbage-collects the Secret in the gap between the two calls.
+timeout 60 kubectl -n $ns patch secret $name --type=merge -p '{"metadata":{"ownerReferences":null}}' >/dev/null
+echo "ownerReference stripped"
 if timeout 30 kubectl -n $ns get externalsecret $name >/dev/null 2>&1; then
-  echo "resurrected ExternalSecret found, removing it"
+  echo "ExternalSecret still present, removing it"
   timeout 60 kubectl -n $ns delete externalsecret $name --wait=false 2>&1 | tail -1
   sleep 3
   fin=$(timeout 30 kubectl -n $ns get externalsecret $name -o jsonpath='{.metadata.finalizers}' 2>/dev/null)
   [ -n "$fin" ] && timeout 60 kubectl -n $ns patch externalsecret $name --type=merge \
     -p '{"metadata":{"finalizers":null}}' >/dev/null && echo "released finalizer $fin"
 fi
-timeout 60 kubectl -n $ns patch secret $name --type=merge -p '{"metadata":{"ownerReferences":null}}' >/dev/null
 timeout 60 kubectl -n $ns patch secret $name --type=merge -p \
   '{"metadata":{"labels":{"reconcile.external-secrets.io/managed":null,"reconcile.external-secrets.io/created-by":null}}}' >/dev/null
 timeout 90 kubectl -n external-secrets scale deploy external-secrets --replicas=1 >/dev/null
-echo "ownerReference and ESO labels stripped; ESO restored"
+echo "ESO labels stripped; controller restored"
 
 sleep 15
 uid1=$(timeout 60 kubectl -n $ns get secret $name -o jsonpath='{.metadata.uid}')
