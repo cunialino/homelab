@@ -11,12 +11,14 @@ kind: Kustomization
 resources:
   - cluster.yaml
   - arroyo.yaml
+  - openwebui.yaml
   - lakekeeper.yaml
   - oxicloud.yaml
   - risingwave.yaml
   - vikunja.yaml
   - secret_arroyo.yaml
   - role-secret-lakekeeper.yaml
+  - role-secret-openwebui.yaml
   - secret_oxicloud.yaml
   - secret_risingwave.yaml
   - podmonitor.yaml

@@ -23,6 +23,7 @@ resources:
   - apps/lakekeeper.yaml
   - apps/monitoring.yaml
   - apps/ntfy.yaml
+  - apps/openwebui.yaml
   - apps/oxicloud.yaml
   - apps/renovate.yaml
   - apps/vikunja.yaml

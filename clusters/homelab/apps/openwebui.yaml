@@ -1,0 +1,33 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: openwebui
+  namespace: flux-system
+spec:
+  interval: 30m
+  retryInterval: 2m
+  timeout: 15m
+  # Content lives in the myai repository, not here: homelab keeps only this pointer plus the Source it
+  # reads, and the cluster side of the database this app connects to.
+  sourceRef:
+    kind: GitRepository
+    name: myai
+  path: ./clusters/homelab/apps/openwebui
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+    - name: sources
+    # The app authenticates against the openwebui database at startup. The Database CR and the CNPG
+    # role Secret live in homelab's postgres layer, so they have to exist before the pod starts.
+    - name: postgres
+  prune: true
+  # transition scaffolding: safe rollback while Argo still owns this app
+  deletionPolicy: Orphan
+  wait: true
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: StatefulSet
+      name: openwebui-open-webui
+      namespace: openwebui
