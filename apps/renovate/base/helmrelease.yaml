@@ -112,17 +112,6 @@ spec:
           "customManagers": [
             {
               "customType": "regex",
-              "description": "Update ARC runner image in inline Argo CD Helm values",
-              "managerFilePatterns": ["/^apps\\/arc\\.ya?ml$/"],
-              "matchStrings": [
-                "image:\\s+(?<depName>ghcr\\.io\\/actions\\/actions-runner):(?<currentValue>[^\\s]+)"
-              ],
-              "datasourceTemplate": "docker",
-              "versioningTemplate": "docker",
-              "extractVersionTemplate": "^v?(?<version>.*)$"
-            },
-            {
-              "customType": "regex",
               "description": "Update ARC runner image in inline HelmRelease values",
               "managerFilePatterns": [
                 "/^clusters\\/homelab\\/apps\\/arc-runners-crypto\\/helmrelease\\.ya?ml$/",
