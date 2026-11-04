@@ -1,0 +1,26 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: graphiti
+  namespace: flux-system
+spec:
+  interval: 30m
+  retryInterval: 2m
+  timeout: 10m
+  # Content lives in the myai repository, not here: homelab keeps only this pointer plus the Source it
+  # reads. Everything about the app itself stays with the app.
+  sourceRef:
+    kind: GitRepository
+    name: myai
+  path: ./clusters/homelab/apps/graphiti
+  dependsOn:
+    - name: sources
+    # ScaledObject and InterceptorRoute (http.keda.sh/v1beta1) are KEDA CRDs, and the external scaler
+    # whose RBAC this layer patches also runs out of that install.
+    - name: keda
+  prune: true
+  # transition scaffolding: safe rollback while Argo still owns this app
+  deletionPolicy: Orphan
+  # No wait or healthChecks: the two llama.cpp Deployments are KEDA-scaled and idle at zero replicas,
+  # and a warm llama.cpp rollout takes minutes to load a GGUF. Gating on them would time out on an
+  # ordinary scale-down.

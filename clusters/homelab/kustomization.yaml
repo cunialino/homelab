@@ -18,6 +18,7 @@ resources:
   - apps/cilium.yaml
   - apps/collector.yaml
   - apps/ddg-search.yaml
+  - apps/graphiti.yaml
   - apps/garage.yaml
   - apps/lakekeeper.yaml
   - apps/monitoring.yaml
