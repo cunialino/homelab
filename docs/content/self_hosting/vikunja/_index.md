@@ -14,10 +14,13 @@ me much.
 
 ## Configuration
 
-Vikunja is deployed via [ArgoCD](/cicd/argocd/), with its Application definition
-at [apps/vikunja.yaml](https://github.com/cunialino/homelab/tree/main/apps/vikunja.yaml)
-and configuration at [base/vikunja/](https://github.com/cunialino/homelab/tree/main/base/vikunja/).
+Vikunja is deployed with [Flux](/cicd/flux/): its Deployment, ConfigMap, PVC, Service and
+Ingress are plain manifests in [apps/vikunja/base/](https://github.com/cunialino/homelab/tree/main/apps/vikunja/base/),
+synced by [clusters/homelab/apps/vikunja.yaml](https://github.com/cunialino/homelab/blob/main/clusters/homelab/apps/vikunja.yaml).
 
 The deployment uses the `longhorn-wdblack` storage class for persistent volume
-storage. The Vikunja secret (DB password, JWT secret) is provisioned via an
-ExternalSecret from Bitwarden Secrets Manager.
+storage. The Vikunja secret (DB password, JWT secret) is a
+[SOPS-encrypted Secret](/utils/secrets/), and so is the CNPG role credential beside it:
+`secret-app.yaml` for Vikunja itself, `secret-cnpg-role.yaml` for the managed role.
+That pairing in one directory is deliberate — this layer owns objects in both
+`vikunja` and `cnpg-system`.

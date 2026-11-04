@@ -17,12 +17,12 @@ serves LLMs over the LAN to the other machines (see
 
 ## Goals
 
-- **Run reliable self-hosted services** — Vikunja, Nextcloud, and supporting
+- **Run reliable self-hosted services** — Vikunja, OxiCloud, and supporting
   infrastructure that I use daily
 - **Experiment with data infrastructure** — Streaming pipelines, messaging
   (NATS), object storage (Garage), and managed Postgres (CloudNativePG)
 - **Build a reproducible, GitOps-driven cluster** — Everything declarative,
-  synchronized via ArgoCD, secrets injected at runtime from Bitwarden
+  synchronized by Flux, secrets encrypted with SOPS and committed alongside it
 - **Learn by breaking things** — Test new tech, recover from failures, and
   understand how production-grade K8s patterns work at homelab scale
 
@@ -44,8 +44,8 @@ serves LLMs over the LAN to the other machines (see
 | Kubernetes | [k3s](https://k3s.io/) with embedded etcd, HA control plane |
 | CNI | [Cilium](https://cilium.io/) with eBPF, kube-proxy replacement |
 | HA VIP | [kube-vip](https://kube-vip.io/) — `192.168.0.100:6443` |
-| GitOps | [ArgoCD](https://argo-cd.readthedocs.io/) — app-of-apps pattern |
-| Secrets | [External Secrets Operator](https://external-secrets.io/) + Bitwarden |
+| GitOps | [Flux](https://fluxcd.io/) — one sync object per application |
+| Secrets | [SOPS](https://github.com/getsops/sops) + [age](https://age-encryption.org/) — encrypted `Secret` manifests in Git |
 | Block Storage | [Longhorn](https://longhorn.io/) — 2 replicas, XFS, trim |
 | Object Storage | [Garage](https://garagehq.deuxfleurs.fr/) — single-node S3 |
 | Database | [CloudNativePG](https://cloudnative-pg.io/) — 3-instance Postgres |
@@ -64,8 +64,9 @@ serves LLMs over the LAN to the other machines (see
   without performance penalties.
 - **NixOS** — Reproducible node configuration via a single module. All nodes
   share the same k3s module from my [dotfiles](https://github.com/cunialino/dotfiles).
-- **GitOps with ArgoCD** — Self-healing, drift detection, and a single
-  `bootstrap/root-app.yaml` to bring up the entire cluster.
+- **GitOps with Flux** — Self-healing, drift detection, and a single
+  `clusters/homelab/` directory to bring up the entire cluster. Workloads that
+  carry their own code live in their own repositories, pointed at from here.
 - **No public exposure** — Everything reaches me through Tailscale. No port
   forwarding, no cloud firewall rules, no attack surface.
 
@@ -111,19 +112,18 @@ flowchart TB
 flowchart TB
     tailscale["Tailscale VPN<br/>tail2f38ea.ts.net"]
 
-    tailscale -->|access| argocd
+    tailscale -->|access| flux
 
     subgraph platform["K3s platform"]
-        argocd["ArgoCD<br/>GitOps app-of-apps"]
+        flux["Flux<br/>GitOps reconciler"]
 
         subgraph networking["Networking"]
             cilium["Cilium CNI<br/>eBPF + Hubble"]
             kubevip["kube-vip<br/>192.168.0.100"]
         end
 
-        subgraph security["Security"]
-            eso["ESO + Bitwarden"]
-            cert["cert-manager"]
+        subgraph security["Secrets"]
+            sops["SOPS + age<br/>ciphertext in Git"]
         end
 
         subgraph storage["Storage"]
@@ -137,8 +137,9 @@ flowchart TB
         end
 
         subgraph apps["Applications"]
-            nextcloud["Nextcloud"]
             vikunja["Vikunja"]
+            oxicloud["OxiCloud"]
+            myai["myai agents"]
         end
 
         subgraph observability["Observability"]
@@ -159,7 +160,7 @@ flowchart TB
         prom --> alertmgr
     end
 
-    tailscale -.->|ingress| nextcloud
+    tailscale -.->|ingress| oxicloud
     tailscale -.->|ingress| vikunja
     tailscale -.->|ingress| grafana
     tailscale -.->|ingress| longhorn
@@ -173,12 +174,12 @@ flowchart TB
     classDef vpnNode fill:#2c2c2a,stroke:#888780,color:#D3D1C7
 
     class tailscale vpnNode
-    class argocd appNode
+    class flux appNode
     class cilium,kubevip netNode
-    class eso,cert secNode
+    class sops secNode
     class longhorn,garage stoNode
     class cnpg,nats datNode
-    class nextcloud,vikunja appNode
+    class vikunja,oxicloud,myai appNode
     class alloy,loki,prom,grafana,alertmgr obsNode
 
     style networking fill:#0d1f33,stroke:#378ADD

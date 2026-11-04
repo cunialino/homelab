@@ -17,7 +17,9 @@ ARC runners serve multiple purposes in my pipeline:
 
 ## Configuration
 
-ARC Runners are configured via [apps/arc.yaml](https://github.com/cunialino/homelab/tree/main/apps/arc.yaml). I use `longhorn` as the storage class for runner work volumes, ensuring persistent storage for build processes. The GitHub personal access token required for authentication is securely managed through External Secrets, referenced in [base/arc/secret_pat.yaml](https://github.com/cunialino/homelab/tree/main/base/arc/secret_pat.yaml).
+ARC Runners are configured in [infrastructure/controllers/arc-runners/](https://github.com/cunialino/homelab/tree/main/infrastructure/controllers/arc-runners/): one `HelmRelease` for the controller and one for the autoscaling runner scale set, values inline. I use `longhorn` as the storage class for runner work volumes, ensuring persistent storage for build processes. The credentials the controller authenticates to GitHub with are a [SOPS-encrypted Secret](/utils/secrets/) in [secret-auth.yaml](https://github.com/cunialino/homelab/blob/main/infrastructure/controllers/arc-runners/secret-auth.yaml).
+
+The [crypto-lakehouse](https://github.com/cunialino/crypto-lakehouse) repository runs a second scale set for its own builds, declared in that repository and synced by [clusters/homelab/apps/arc-runners-crypto.yaml](https://github.com/cunialino/homelab/blob/main/clusters/homelab/apps/arc-runners-crypto.yaml). Both scale sets share this controller, so the repository keeps the namespace, the controller and the credentials.
 
 ## Container Build Workflow
 
@@ -32,4 +34,4 @@ This approach provides several advantages:
 The workflow typically involves:
 1. Nix evaluates dependencies and builds the image layers as a tar archive
 2. Skopeo copies the tar file to the target registry with proper authentication
-3. The resulting image is available for deployment via ArgoCD
+3. The resulting image is available for deployment via Flux

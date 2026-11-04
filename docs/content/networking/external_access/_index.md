@@ -20,19 +20,24 @@ I chose [Tailscale](https://tailscale.com/) as my external access solution becau
 
 ## How I installed it
 
-The [Tailscale Operator](https://tailscale.com/docs/features/kubernetes-operator) is deployed via [ArgoCD](/cicd/argocd/) in the `tailscale` namespace:
+The [Tailscale Operator](https://tailscale.com/docs/features/kubernetes-operator) is deployed with [Flux](/cicd/flux/) in the `tailscale` namespace:
 
-- **Chart**: `tailscale-operator` from pkgs.tailscale.com
-- **Values**: OAuth credentials managed via an External Secret
-- **OAuth Secret**: `operator-oauth` fetched from Bitwarden Secrets Manager
+- **Chart**: `tailscale-operator` from `pkgs.tailscale.com/helmcharts`, pinned to an exact version
+- **Values**: written inline in the `HelmRelease`
+- **OAuth Secret**: `operator-oauth`, a [SOPS-encrypted Secret](/utils/secrets/)
 
 ### Key Technical Details
 
-The [ArgoCD Application](https://github.com/cunialino/homelab/tree/main/apps/tailscale.yaml)
-installs the `tailscale-operator` chart from `pkgs.tailscale.com/helmcharts`.
-OAuth credentials (`client_id`, `client_secret`) are fetched from Bitwarden
-Secrets Manager via an
-[ExternalSecret](https://github.com/cunialino/homelab/tree/main/base/tailscale/secrets.yaml).
+The `HelmRelease` in
+[infrastructure/controllers/tailscale-operator/](https://github.com/cunialino/homelab/tree/main/infrastructure/controllers/tailscale-operator/)
+installs the chart from `pkgs.tailscale.com/helmcharts`. The OAuth credentials
+(`client_id`, `client_secret`) are committed encrypted with SOPS in
+[secret-oauth.yaml](https://github.com/cunialino/homelab/blob/main/infrastructure/controllers/tailscale-operator/secret-oauth.yaml)
+and decrypted by Flux at apply time.
+
+Ingresses reach the operator through the `ProxyClass` objects in
+[infrastructure/configs/proxy-classes/](https://github.com/cunialino/homelab/tree/main/infrastructure/configs/proxy-classes/) —
+that is what a `tailscale.com/proxy-class` annotation on an Ingress names.
 
 ## What it's used for
 
@@ -46,17 +51,16 @@ My k3s cluster services are reachable via Tailscale tailnet without exposing por
 
 ### 2. Credential security
 
-External Secrets integration ensures sensitive credentials never touch the Git repository:
+The OAuth client credentials are stored encrypted in Git with [SOPS and age](/utils/secrets/) rather than pulled from an external store at runtime. The ciphertext is what a review sees; the cluster is handed a normal `Secret`.
 
-- **Bitwarden**: Stores OAuth client credentials securely
-- **ClusterSecretStore**: Fetches secrets at runtime
-- **No git exposure**: Credentials remain encrypted and out of version control
+- **Encrypted in Git**: only the `data` block of the manifest is ciphertext, so the diff still reads
+- **One key**: the age private key sits in `flux-system/sops-age` and never enters Git
+- **No runtime dependency**: the operator starts without reaching a secrets API
 
 ## References
 
 - [Tailscale Operator Documentation](https://tailscale.com/docs/features/kubernetes-operator)
 - [Tailscale Official Docs](https://tailscale.com/docs/)
-- [ArgoCD Application](https://github.com/cunialino/homelab/tree/main/apps/tailscale.yaml)
-- [External Secret Configuration](https://github.com/cunialino/homelab/tree/main/base/tailscale/secrets.yaml)
-- [External Secrets Operator](https://external-secrets.io/)
-- [Bitwarden Secrets Manager Integration](https://external-secrets.io/v1beta1/secretstores/bitwarden/)
+- [Tailscale operator manifests](https://github.com/cunialino/homelab/tree/main/infrastructure/controllers/tailscale-operator/)
+- [SOPS-encrypted OAuth Secret](https://github.com/cunialino/homelab/blob/main/infrastructure/controllers/tailscale-operator/secret-oauth.yaml)
+- [ProxyClasses](https://github.com/cunialino/homelab/tree/main/infrastructure/configs/proxy-classes/)

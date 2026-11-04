@@ -14,9 +14,9 @@ I chose to run Renovate as a Kubernetes CronJob rather than as a GitHub App to k
 
 ## Deployment
 
-Renovate is deployed via [ArgoCD](/cicd/argocd/) in the `renovate` namespace. It uses the official Renovate Helm chart and runs every 6 hours as a CronJob.
+Renovate is deployed with [Flux](/cicd/flux/) in the `renovate` namespace. It uses the official Renovate Helm chart and runs every 6 hours as a CronJob.
 
-You can find the ArgoCD Application at [apps/renovate.yaml](https://github.com/cunialino/homelab/tree/main/apps/renovate.yaml) and the configuration at [base/renovate/values.yaml](https://github.com/cunialino/homelab/tree/main/base/renovate/values.yaml).
+The `HelmRelease`, its `HelmRepository` and its token live in [apps/renovate/base/](https://github.com/cunialino/homelab/tree/main/apps/renovate/base/).
 
 ## Configuration
 
@@ -28,14 +28,17 @@ Renovate scans these repositories for dependency updates:
 
 - `cunialino/homelab`
 - `cunialino/crypto-lakehouse`
+- `cunialino/myai`
 
 ### Enabled Managers
 
-Renovate handles updates across ArgoCD Application files, Helm values, Kubernetes manifests, Dockerfiles, and Docker Compose files. It uses a custom regex manager to track its own chart version.
+Renovate bumps `HelmRelease` chart versions and links each one to its `HelmRepository` through the `flux` manager, and also covers Helm values, plain Kubernetes manifests, Dockerfiles and Docker Compose files.
+
+Two details matter once manifests, rather than an app-of-apps, are the source of truth. The `flux` manager needs `managerFilePatterns` spelled out, because its default matches only `gotk-components.yaml` and would otherwise leave every chart pin invisible. And a `HelmRelease` is only linked to its source when the manifest states the namespace, either in `metadata.namespace` or in `spec.chart.spec.sourceRef.namespace`. The config is embedded as a YAML block scalar, so it is strict JSON: a `#` comment inside it breaks the run, which is why the explanations sit in the YAML around it.
 
 ### Authentication
 
-A GitHub personal access token is provisioned as `RENOVATE_TOKEN` via an ExternalSecret from Bitwarden Secrets Manager.
+A GitHub personal access token is provided as `RENOVATE_TOKEN` from a [SOPS-encrypted Secret](/utils/secrets/) in [secret-token.yaml](https://github.com/cunialino/homelab/blob/main/apps/renovate/base/secret-token.yaml).
 
 ## Pull Request Workflow
 

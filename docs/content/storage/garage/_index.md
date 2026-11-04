@@ -13,12 +13,12 @@ when running queries on it.
 
 ## Configuration
 
-I deploy Garage via [ArgoCD](/cicd/argocd/), with its Application definition at
-[apps/garage.yaml](https://github.com/cunialino/homelab/tree/main/apps/garage.yaml)
-and configuration at [base/garage/](https://github.com/cunialino/homelab/tree/main/base/garage/).
+I deploy Garage with [Flux](/cicd/flux/): every manifest, including the `HelmRelease`
+and its values, lives in [apps/garage/base/](https://github.com/cunialino/homelab/tree/main/apps/garage/base/)
+and is synced by [clusters/homelab/apps/garage.yaml](https://github.com/cunialino/homelab/blob/main/clusters/homelab/apps/garage.yaml).
 
-API keys and the admin token are provisioned via an ExternalSecret from Bitwarden
-Secrets Manager.
+API keys and the admin token are a [SOPS-encrypted Secret](/utils/secrets/) in
+[secret-garage.yaml](https://github.com/cunialino/homelab/blob/main/apps/garage/base/secret-garage.yaml).
 
 ## LoadBalancer VIP
 
@@ -32,18 +32,18 @@ Cilium owns the `LoadBalancer` service IPs through an IP pool. I reserve a
 fixed IP for Garage and tell Cilium which node and network interface should
 announce it:
 
-1. **IP pool** — [`base/cilium/lb-ip-pool.yaml`](https://github.com/cunialino/homelab/tree/main/base/cilium/lb-ip-pool.yaml)
+1. **IP pool** — [`apps/cilium/base/ip-pool.yaml`](https://github.com/cunialino/homelab/blob/main/apps/cilium/base/ip-pool.yaml)
    defines the range `192.168.0.200-192.168.0.254` that Cilium may hand out.
-2. **L2 announcement policy** — [`base/garage/cilium-l2.yaml`](https://github.com/cunialino/homelab/tree/main/base/garage/cilium-l2.yaml)
+2. **L2 announcement policy** — [`apps/garage/base/cilium-l2.yaml`](https://github.com/cunialino/homelab/blob/main/apps/garage/base/cilium-l2.yaml)
    (`CiliumL2AnnouncementPolicy`) binds the `garage` service to the node
    `elcungem` and announces it on the matching interfaces (`eth*`, `enp*`,
    `eno*`, `ens*`, `end*`).
-3. **Service** — [`base/garage/service.yaml`](https://github.com/cunialino/homelab/tree/main/base/garage/service.yaml)
+3. **Service** — [`apps/garage/base/service.yaml`](https://github.com/cunialino/homelab/blob/main/apps/garage/base/service.yaml)
    requests the fixed IP `192.168.0.200` through the
    `lbipam.cilium.io/ips` annotation.
 
 ```yaml
-# base/garage/service.yaml
+# apps/garage/base/service.yaml
 metadata:
   name: garage-svc
   annotations:

@@ -8,9 +8,9 @@ sort_by = "weight"
 
 Every good setup starts with automating the boring parts. Hence, one of the first things I set up is the CI/CD pipeline.
 
-## ArgoCD
+## Flux
 
-[ArgoCD](/cicd/argocd/) manages all deployments on my cluster using the "app of apps" pattern. It ensures my environment is reproducible and synchronized with Git.
+[Flux](/cicd/flux/) keeps every deployment on my cluster synchronized with Git, one sync object per application. It ensures my environment is reproducible without a UI: a change that is not in Git gets reverted.
 
 ## ARC Runners
 

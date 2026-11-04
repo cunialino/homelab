@@ -8,26 +8,25 @@ Comprehensive monitoring is essential for understanding the health and performan
 
 ## Configuration
 
-I deploy the monitoring stack via ArgoCD as a multi-source application defined in [apps/monitoring.yaml](https://github.com/cunialino/homelab/tree/main/apps/monitoring.yaml) with four sources:
-- **kube-prometheus-stack**: Prometheus, Grafana, and Alertmanager
-- **Loki**: Log aggregation
-- **Alloy**: Log and metric collection agent
-- **base/monitoring/**: Custom resources (ingress, secrets)
+I deploy the monitoring stack with [Flux](/cicd/flux/) as three `HelmRelease` objects in [apps/monitoring/base/](https://github.com/cunialino/homelab/tree/main/apps/monitoring/base/), each with its values written inline:
+- **`prometheus`** ([helmrelease-prometheus.yaml](https://github.com/cunialino/homelab/blob/main/apps/monitoring/base/helmrelease-prometheus.yaml)): kube-prometheus-stack — Prometheus, Grafana, and Alertmanager
+- **`loki`** ([helmrelease-loki.yaml](https://github.com/cunialino/homelab/blob/main/apps/monitoring/base/helmrelease-loki.yaml)): Log aggregation
+- **`alloy`** ([helmrelease-alloy.yaml](https://github.com/cunialino/homelab/blob/main/apps/monitoring/base/helmrelease-alloy.yaml)): Log and metric collection agent
 
-Specific configurations are in [base/monitoring/](https://github.com/cunialino/homelab/tree/main/base/monitoring/).
+The Ingress, the Alertmanager credentials and the extra dashboard are plain manifests in the same directory, synced by [clusters/homelab/apps/monitoring.yaml](https://github.com/cunialino/homelab/blob/main/clusters/homelab/apps/monitoring.yaml).
 
 ### Grafana
 
 Grafana provides powerful dashboards for visualizing my metrics.
 
-*   **Ingress**: Access to the Grafana UI is managed via an Ingress resource ([base/monitoring/ingress.yaml](https://github.com/cunialino/homelab/tree/main/base/monitoring/ingress.yaml)), using Tailscale for secure external access.
-*   **Resources and Persistence**: Grafana is configured with resource requests/limits and uses a persistent volume with the `longhorn-wdblack` storage class for data persistence ([base/monitoring/values.yaml](https://github.com/cunialino/homelab/tree/main/base/monitoring/values.yaml)).
+*   **Ingress**: Access to the Grafana UI is managed via an Ingress resource ([apps/monitoring/base/ingress.yaml](https://github.com/cunialino/homelab/tree/main/apps/monitoring/base/ingress.yaml)), using Tailscale for secure external access.
+*   **Resources and Persistence**: Grafana is configured with resource requests/limits and uses a persistent volume with the `longhorn-wdblack` storage class for data persistence ([helmrelease-prometheus.yaml](https://github.com/cunialino/homelab/blob/main/apps/monitoring/base/helmrelease-prometheus.yaml)).
 *   **Loki Datasource**: Loki is pre-configured as an additional datasource, enabling log exploration directly within Grafana.
 *   **Dashboards from Git**: the `grafana-sc-dashboard` sidecar ships enabled with `kube-prometheus-stack` and watches **all namespaces**
     for ConfigMaps labelled `grafana_dashboard=1` whose data keys end in `.json`. So a dashboard is just a manifest in
-    [base/monitoring/](https://github.com/cunialino/homelab/tree/main/base/monitoring/) — no chart values change and no UI import.
+    [apps/monitoring/base/](https://github.com/cunialino/homelab/tree/main/apps/monitoring/base/) — no chart values change and no UI import.
     Referencing the provisioned datasource by its stable `uid: prometheus` (rather than by name) keeps the panels intact across reinstalls.
-*   **elcunhalo LLM dashboard** ([base/monitoring/dashboard-elcunhalo.yaml](https://github.com/cunialino/homelab/tree/main/base/monitoring/dashboard-elcunhalo.yaml),
+*   **elcunhalo LLM dashboard** ([apps/monitoring/base/dashboard-elcunhalo.yaml](https://github.com/cunialino/homelab/tree/main/apps/monitoring/base/dashboard-elcunhalo.yaml),
     uid `elcunhalo-llm`): prefill and decode token throughput, prompt-cache hit rate, KV cache pressure, speculative-decode acceptance,
     preset residency and scrape coverage, plus GPU utilisation, power, clocks, temperatures and per-process memory.
     The quirks that shaped it:
@@ -76,12 +75,12 @@ Grafana provides powerful dashboards for visualizing my metrics.
 
 Prometheus is responsible for collecting and storing metrics from my Kubernetes cluster.
 
-*   **Retention**: Prometheus is configured to retain metrics for 10 days ([base/monitoring/values.yaml](https://github.com/cunialino/homelab/tree/main/base/monitoring/values.yaml)).
-*   **Storage**: It uses a 25Gi persistent volume with the `longhorn-wdblack` storage class for metric storage ([base/monitoring/values.yaml](https://github.com/cunialino/homelab/tree/main/base/monitoring/values.yaml)).
+*   **Retention**: Prometheus is configured to retain metrics for 10 days ([helmrelease-prometheus.yaml](https://github.com/cunialino/homelab/blob/main/apps/monitoring/base/helmrelease-prometheus.yaml)).
+*   **Storage**: It uses a 25Gi persistent volume with the `longhorn-wdblack` storage class for metric storage ([helmrelease-prometheus.yaml](https://github.com/cunialino/homelab/blob/main/apps/monitoring/base/helmrelease-prometheus.yaml)).
 *   **Remote Write**: The remote write receiver is enabled, allowing Alloy to forward node metrics directly to Prometheus.
 *   **Remote Write From Outside The Cluster**: `prometheus-operated` is headless, so hosts that are not k3s nodes cannot reach it — they have neither
-    cluster DNS nor a route into `10.42.0.0/16`. A dedicated `LoadBalancer` service ([base/monitoring/prometheus-lan-service.yaml](https://github.com/cunialino/homelab/tree/main/base/monitoring/prometheus-lan-service.yaml))
-    claims `192.168.0.203` from the [LAN IP pool](https://github.com/cunialino/homelab/tree/main/base/cilium/lb-ip-pool.yaml) and publishes `:9090`
+    cluster DNS nor a route into `10.42.0.0/16`. A dedicated `LoadBalancer` service ([apps/monitoring/base/prometheus-lan-service.yaml](https://github.com/cunialino/homelab/tree/main/apps/monitoring/base/prometheus-lan-service.yaml))
+    claims `192.168.0.203` from the [LAN IP pool](https://github.com/cunialino/homelab/blob/main/apps/cilium/base/ip-pool.yaml) and publishes `:9090`
     on the switch, restricted by `loadBalancerSourceRanges` to `192.168.0.0/24`.
     This is how **elcunhalo** (`192.168.0.6`, the Strix Halo LLM box) ships its metrics: its Alloy systemd unit scrapes a local
     `prometheus.exporter.unix` and remote writes to `http://192.168.0.203:9090/api/v1/write`, stamping `job="host-node-exporter"` and
@@ -94,7 +93,7 @@ Prometheus is responsible for collecting and storing metrics from my Kubernetes 
 
 [Loki](https://grafana.com/oss/loki/) is a log aggregation system that pairs with Grafana for log exploration.
 
-*   **Mode**: Deployed as a `SingleBinary` (single replica, no separate backend/read/write components) ([base/monitoring/loki-values.yaml](https://github.com/cunialino/homelab/tree/main/base/monitoring/loki-values.yaml)).
+*   **Mode**: Deployed as a `SingleBinary` (single replica, no separate backend/read/write components) ([helmrelease-loki.yaml](https://github.com/cunialino/homelab/blob/main/apps/monitoring/base/helmrelease-loki.yaml)).
 *   **Storage**: Logs are stored on the filesystem with 40Gi persistent volume.
 *   **Auth**: Authentication is disabled for internal cluster access.
 
@@ -102,7 +101,7 @@ Prometheus is responsible for collecting and storing metrics from my Kubernetes 
 
 [Grafana Alloy](https://grafana.com/docs/alloy/) is the collector agent that gathers logs and metrics within the cluster.
 
-*   **Log Collection**: Reads systemd journal logs and Kubernetes pod logs from host mounts, and forwards them to Loki ([base/monitoring/alloy-values.yaml](https://github.com/cunialino/homelab/tree/main/base/monitoring/alloy-values.yaml)).
+*   **Log Collection**: Reads systemd journal logs and Kubernetes pod logs from host mounts, and forwards them to Loki ([helmrelease-alloy.yaml](https://github.com/cunialino/homelab/blob/main/apps/monitoring/base/helmrelease-alloy.yaml)).
 *   **Node Metrics**: Runs a node exporter via host mounts (`/proc`, `/sys`, `/`) and forwards the metrics to Prometheus via remote write.
 *   **Host Access**: Runs with `hostPID: true` and mounts several host paths to access logs and system information.
 
@@ -110,13 +109,13 @@ Prometheus is responsible for collecting and storing metrics from my Kubernetes 
 
 Alertmanager handles alert routing and notification delivery.
 
-*   **Status**: Enabled and configured with Telegram as the notification channel ([base/monitoring/values.yaml](https://github.com/cunialino/homelab/tree/main/base/monitoring/values.yaml)).
+*   **Status**: Enabled and configured with Telegram as the notification channel, in the values of [helmrelease-prometheus.yaml](https://github.com/cunialino/homelab/blob/main/apps/monitoring/base/helmrelease-prometheus.yaml).
 *   **Routing**: Alerts are delivered via Telegram, with non-critical alerts (Watchdog, InfoInhibitor, info severity) routed to a null receiver.
-*   **Credentials**: The Telegram bot token is managed externally via Bitwarden ([base/monitoring/secret_alertmanager.yaml](https://github.com/cunialino/homelab/tree/main/base/monitoring/secret_alertmanager.yaml)).
+*   **Credentials**: The Telegram bot token is a [SOPS-encrypted Secret](/utils/secrets/) in [secret-alertmanager.yaml](https://github.com/cunialino/homelab/blob/main/apps/monitoring/base/secret-alertmanager.yaml), mounted as a file Alertmanager reads at startup.
 
 ### Custom Alert Rules
 
-I define additional Prometheus alerting rules for common failure scenarios ([base/monitoring/values.yaml](https://github.com/cunialino/homelab/tree/main/base/monitoring/values.yaml)):
+I define additional Prometheus alerting rules for common failure scenarios ([helmrelease-prometheus.yaml](https://github.com/cunialino/homelab/blob/main/apps/monitoring/base/helmrelease-prometheus.yaml)):
 
 *   **PodImagePullBackOff**: Fires when a pod is stuck in ImagePullBackOff for over 5 minutes.
 *   **PodFrequentlyRestarting**: Fires when a pod restarts more than 5 times in an hour.

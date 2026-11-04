@@ -8,10 +8,10 @@ sort_by = "weight"
 
 ## Configuration
 
-I deploy the KEDA operator via ArgoCD as a multi-source application defined in [apps/keda.yaml](https://github.com/cunialino/homelab/tree/main/apps/keda.yaml):
+I deploy KEDA with [Flux](/cicd/flux/) from [infrastructure/controllers/keda/](https://github.com/cunialino/homelab/tree/main/infrastructure/controllers/keda/), as two `HelmRelease` objects with their values written inline:
 
-*   **kedacore/keda helm chart**: The operator, metrics server, and admission webhooks.
-*   **base/keda/values.yaml**: Resource requests and limits for the operator, metrics server, and webhook pods.
+*   **`keda`** ([helmrelease.yaml](https://github.com/cunialino/homelab/blob/main/infrastructure/controllers/keda/helmrelease.yaml)): The operator, metrics server, and admission webhooks.
+*   **`keda-add-ons-http`** ([helmrelease-http.yaml](https://github.com/cunialino/homelab/blob/main/infrastructure/controllers/keda/helmrelease-http.yaml)): The HTTP add-on, which scales on request rate through an interceptor instead of on queue depth.
 
 The operator runs in the `keda` namespace and installs the KEDA CRDs (`ScaledObject`, `TriggerAuthentication`, etc.).
 
@@ -19,9 +19,10 @@ The operator runs in the `keda` namespace and installs the KEDA CRDs (`ScaledObj
 
 ## Example
 
-As an example, the [crypto-lakehouse](https://github.com/cunialino/crypto-lakehouse) repository scales its RisingWave compute StatefulSet based on the backlog of the NATS JetStream stream it consumes. The `ScaledObject` is at `deploy/base/risingwave/scaledobject.yaml` and uses the [`nats-jetstream` scaler](https://keda.sh/docs/latest/scalers/nats-jetstream/):
+As an example, the [myai](https://github.com/cunialino/myai) repository keeps its two llama.cpp models scaled to nothing between requests. The `ScaledObject`s live next to the workloads they scale, in `clusters/homelab/apps/graphiti/`:
 
-*   **Target**: The `risingwave-compute` StatefulSet in the `risingwave` namespace.
-*   **Stream/Consumer**: Monitors the `risingwave_consumer` on the `tradesstream` JetStream stream.
-*   **Endpoint**: `nats-cluster-headless.nats.svc.cluster.local:8222`, the NATS server monitoring endpoint (KEDA resolves the consumer leader across the 3-node cluster automatically).
-*   **Bounds**: `minReplicaCount: 0` and `maxReplicaCount: 10`, with a 300s scale-down stabilization window to avoid flapping.
+*   **Targets**: The `llamacpp-graphiti` and `llamacpp-embed` Deployments in the `graphiti` namespace.
+*   **Scaler**: [`external-push`](https://keda.sh/docs/latest/scalers/external-push/), fed by the KEDA HTTP add-on's interceptor, so a model wakes up on the request that needs it.
+*   **Bounds**: `minReplicaCount: 0` and `maxReplicaCount: 1` — one model of each kind is all the RAM allows, and nothing runs while idle.
+
+Because the add-on's scaler runs as its own ServiceAccount in the `keda` namespace while the workloads live in `graphiti`, that directory also carries `keda-rbac-fix.yaml`: a `ClusterRole` and `ClusterRoleBinding` granting the scaler rights over the namespace it scales.

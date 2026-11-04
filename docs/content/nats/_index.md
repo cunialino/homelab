@@ -8,11 +8,11 @@ sort_by = "weight"
 
 ## Configuration
 
-I deploy NATS via ArgoCD, with its configuration in [apps/nats.yaml](https://github.com/cunialino/homelab/tree/main/apps/nats.yaml) and specific configurations in [base/nats/](https://github.com/cunialino/homelab/tree/main/base/nats/).
+I deploy NATS with [Flux](/cicd/flux/) as two `HelmRelease` objects in [infrastructure/controllers/nats/](https://github.com/cunialino/homelab/tree/main/infrastructure/controllers/nats/).
 
 ### NATS Cluster
 
-The NATS cluster ([base/nats/cluster_values.yaml](https://github.com/cunialino/homelab/tree/main/base/nats/cluster_values.yaml)) is configured with:
+The NATS cluster ([helmrelease-cluster.yaml](https://github.com/cunialino/homelab/blob/main/infrastructure/controllers/nats/helmrelease-cluster.yaml)) is configured with:
 
 *   **3 Replicas**: For high availability.
 *   **JetStream Enabled**: With both memory and file-based storage.
@@ -23,4 +23,4 @@ The NATS cluster ([base/nats/cluster_values.yaml](https://github.com/cunialino/h
 
 ### NACK (NATS Controller)
 
-The NATS Controller ([base/nats/controller_values.yaml](https://github.com/cunialino/homelab/tree/main/base/nats/controller_values.yaml)) manages my NATS cluster. It's configured to connect to the `nats-cluster` and has defined resource requests and limits.
+The NATS Controller ([helmrelease-nack.yaml](https://github.com/cunialino/homelab/blob/main/infrastructure/controllers/nats/helmrelease-nack.yaml)) manages my NATS cluster. It's configured to connect to the `nats-cluster` and has defined resource requests and limits.

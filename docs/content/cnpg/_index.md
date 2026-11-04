@@ -8,37 +8,36 @@ sort_by = "weight"
 
 ## Configuration
 
-I deploy CloudNativePG via ArgoCD, with its configuration in [apps/cnpg.yaml](https://github.com/cunialino/homelab/tree/main/apps/cnpg.yaml) and specific PostgreSQL cluster and database configurations in [base/cnpg/](https://github.com/cunialino/homelab/tree/main/base/cnpg/).
+I deploy CloudNativePG with [Flux](/cicd/flux/): the operator in [infrastructure/controllers/cloudnative-pg/](https://github.com/cunialino/homelab/tree/main/infrastructure/controllers/cloudnative-pg/) and everything the operator acts on — the cluster, its databases, the role credentials — in [infrastructure/configs/postgres/](https://github.com/cunialino/homelab/tree/main/infrastructure/configs/postgres/).
 
 ### PostgreSQL Cluster
 
-The `pg-cluster` ([base/cnpg/cluster.yaml](https://github.com/cunialino/homelab/tree/main/base/cnpg/cluster.yaml)) is a PostgreSQL cluster with 3 instances. It defines three managed roles:
-
-*   **`risingwave`**: Used by the RisingWave application, with password managed by `rw-metastore-secret`.
-*   **`vikunja`**: Used by the Vikunja application, with password managed by `vikunja` secret.
-*   **`lakekeeper`**: Used by the Lakekeeper application, with password managed by `lakekeeper-secret`.
+The `pg-cluster` ([cluster.yaml](https://github.com/cunialino/homelab/blob/main/infrastructure/configs/postgres/cluster.yaml)) is a PostgreSQL cluster with 3 instances. It declares one managed role per application that connects to it: `vikunja`, `lakekeeper`, `oxicloud` and `openwebui`.
 
 The cluster uses the `longhorn-wdblack` storage class for its 10Gi storage.
 
 ### Databases
 
-I configure three databases within the `pg-cluster`:
+Each application gets its own `Database` object, so the database appears and disappears with the application that owns it:
 
-*   **`risingwave`**: ([base/cnpg/risingwave.yaml](https://github.com/cunialino/homelab/tree/main/base/cnpg/risingwave.yaml)) A database named `risingwave` owned by the `risingwave` role. It includes the `bloom` extension.
-*   **`vikunja`**: ([base/cnpg/vikunja.yaml](https://github.com/cunialino/homelab/tree/main/base/cnpg/vikunja.yaml)) A database named `vikunja` owned by the `vikunja` role. It also includes the `bloom` extension.
-*   **`lakekeeper`**: ([base/cnpg/lakekeeper.yaml](https://github.com/cunialino/homelab/tree/main/base/cnpg/lakekeeper.yaml)) A database named `lakekeeper` owned by the `lakekeeper` role. It also includes the `bloom` extension.
+*   **`vikunja`**: ([vikunja.yaml](https://github.com/cunialino/homelab/blob/main/infrastructure/configs/postgres/vikunja.yaml)) owned by the `vikunja` role, with the `bloom` extension.
+*   **`lakekeeper`**: ([lakekeeper.yaml](https://github.com/cunialino/homelab/blob/main/infrastructure/configs/postgres/lakekeeper.yaml)) owned by the `lakekeeper` role, with the `bloom` extension.
+*   **`oxicloud`**: ([oxicloud.yaml](https://github.com/cunialino/homelab/blob/main/infrastructure/configs/postgres/oxicloud.yaml)) owned by the `oxicloud` role.
+*   **`openwebui`**: ([openwebui.yaml](https://github.com/cunialino/homelab/blob/main/infrastructure/configs/postgres/openwebui.yaml)) owned by the `openwebui` role.
 
-### External Secrets Integration
+### Credentials
 
-Passwords for the PostgreSQL roles (`risingwave`, `vikunja`, and `lakekeeper`) are managed by External Secrets:
+Role passwords are [SOPS-encrypted Secrets](/utils/secrets/) committed to Git, not values pulled from an external store at runtime:
 
-*   **`rw-metastore-secret`**: ([base/cnpg/secret_risingwave.yaml](https://github.com/cunialino/homelab/tree/main/base/cnpg/secret_risingwave.yaml)) Fetches the `risingwave` password from Bitwarden.
-*   **`vikunja`**: ([base/cnpg/secret_vikunja.yaml](https://github.com/cunialino/homelab/tree/main/base/cnpg/secret_vikunja.yaml)) Fetches the `vikunja` password from Bitwarden.
-*   **`lakekeeper-secret`**: ([base/cnpg/secret_lakekeeper.yaml](https://github.com/cunialino/homelab/tree/main/base/cnpg/secret_lakekeeper.yaml)) Fetches the `lakekeeper` password from Bitwarden, with the `cnpg.io/reload` label so CNPG picks up changes.
+*   **`lakekeeper-secret`**: ([role-secret-lakekeeper.yaml](https://github.com/cunialino/homelab/blob/main/infrastructure/configs/postgres/role-secret-lakekeeper.yaml)) carries the `cnpg.io/reload` label so CNPG picks up a change.
+*   **`oxicloud-db`**: ([role-secret-oxicloud.yaml](https://github.com/cunialino/homelab/blob/main/infrastructure/configs/postgres/role-secret-oxicloud.yaml))
+*   **`openwebui-db`**: ([role-secret-openwebui.yaml](https://github.com/cunialino/homelab/blob/main/infrastructure/configs/postgres/role-secret-openwebui.yaml))
+
+Vikunja is the odd one out on purpose: the Secret the operator reads and the Secret Vikunja itself reads ship in the same place, [apps/vikunja/base/](https://github.com/cunialino/homelab/tree/main/apps/vikunja/base/). Everywhere else the application's own copy lives with that application, which is why rotating a password touches two files.
 
 ## Monitoring
 
-I monitor replication health with a `PrometheusRule` ([base/cnpg/prometheusrule.yaml](https://github.com/cunialino/homelab/tree/main/base/cnpg/prometheusrule.yaml)). It alerts on:
+I monitor replication health with a `PrometheusRule` ([prometheusrule.yaml](https://github.com/cunialino/homelab/blob/main/infrastructure/configs/postgres/prometheusrule.yaml)). It alerts on:
 
 - **CNPGReplicationLagWarning**: Replica lag exceeds 60 seconds for 2 minutes
 - **CNPGReplicationLagCritical**: Replica lag exceeds 5 minutes for 1 minute

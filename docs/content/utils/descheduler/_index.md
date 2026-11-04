@@ -16,4 +16,4 @@ After reboots, I always ended up with one of the nodes hosting most of the
 workloads, hence I wanted something to automatically rebalance them across
 the cluster.
 
-The Descheduler application is deployed via ArgoCD, and its configuration can be found in [apps/descheduler.yaml](https://github.com/cunialino/homelab/tree/main/apps/descheduler.yaml).
+The Descheduler is deployed with [Flux](/cicd/flux/), and its `HelmRelease` and values live in [infrastructure/controllers/descheduler/](https://github.com/cunialino/homelab/tree/main/infrastructure/controllers/descheduler/).

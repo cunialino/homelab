@@ -18,7 +18,7 @@ title = "Main Features"
 description = "A production-grade Kubernetes environment engineered for high-performance networking and automated workflows."
 [[extra.features_section.features]]
 title = "CI/CD Pipeline"
-desc = "GitOps workflows with ArgoCD and Kubernetes-native GitHub Actions runners"
+desc = "GitOps workflows with Flux and Kubernetes-native GitHub Actions runners"
 icon = "fa-solid fa-code-merge"
 [[extra.features_section.features]]
 title = "Prometheus & Grafana"
@@ -41,7 +41,7 @@ title = "NATS"
 desc = "High-performance messaging and event streaming"
 icon = "fa-solid fa-envelope"
 [[extra.features_section.features]]
-title = "External Secrets"
-desc = "Bitwarden-backed secret injection with zero git exposure"
+title = "Secrets"
+desc = "SOPS-encrypted secrets committed to Git, decrypted by Flux at apply time"
 icon = "fa-solid fa-lock"
 +++
