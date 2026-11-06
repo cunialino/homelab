@@ -30,13 +30,20 @@ spec:
       successfulJobsHistory: 2
       failedJobsHistory: 1
 
+    # Uncapped, V8 grows its old space to the container limit before it garbage collects, so the
+    # old 1Gi limit OOM-killed the run mid-lookup (exit 137). Keep the heap cap below the memory
+    # limit: buffers and the git subprocesses live outside the old space too. The 500m CPU cap only
+    # throttled the run.
     resources:
       limits:
-        cpu: 500m
-        memory: 1Gi
+        cpu: "2"
+        memory: 3Gi
       requests:
-        cpu: 100m
-        memory: 512Mi
+        cpu: 250m
+        memory: 1Gi
+
+    env:
+      NODE_OPTIONS: "--max-old-space-size=2048"
 
     renovate:
       # Two things in here are easy to break and invisible when it happens:
@@ -127,11 +134,17 @@ spec:
           ]
         }
 
+      # Cache lives under renovate.persistence.cache, and the size key is storageSize: a
+      # top-level persistence.cache.size is accepted by Helm and provisions nothing, which left
+      # every run fetching every registry index from scratch.
+      persistence:
+        cache:
+          enabled: true
+          # pinned, because both local-path and longhorn carry the default annotation and a
+          # node-local cache would pin the CronJob to whichever node grabbed it first
+          storageClass: longhorn
+          storageSize: 1Gi
+
     envFrom:
       - secretRef:
           name: renovate-gh-pat
-
-    persistence:
-      cache:
-        enabled: true
-        size: 256Mi

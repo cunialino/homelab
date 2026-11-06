@@ -18,6 +18,8 @@ Renovate is deployed with [Flux](/cicd/flux/) in the `renovate` namespace. It us
 
 The `HelmRelease`, its `HelmRepository` and its token live in [apps/renovate/base/](https://github.com/cunialino/homelab/tree/main/apps/renovate/base/).
 
+Renovate resolves dependency metadata on the V8 heap, so the container memory limit and the `NODE_OPTIONS` heap cap are set together — the cap has to stay below the limit. Caching is enabled through `renovate.persistence.cache`, which gives the CronJob a `renovate-cache` volume so a run reuses the registry lookups of the previous one.
+
 ## Configuration
 
 All Renovate configuration lives inside the Helm values — there is no `renovate.json` in the repository.
