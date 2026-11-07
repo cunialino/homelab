@@ -13,7 +13,7 @@ spec:
     spec:
       chart: nats
       # pinned, never a semver range: Renovate's flux manager bumps this field and nothing else
-      version: 2.15.1
+      version: 2.15.2
       sourceRef:
         kind: HelmRepository
         name: nats-io
