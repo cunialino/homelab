@@ -3,8 +3,6 @@ kind: PersistentVolumeClaim
 metadata:
   name: immich-model-cache
   annotations:
-    # Re-downloadable, but the CLIP and face weights are ~1.5 GB and refetching them restarts every
-    # queued smart search after a pod rebuild.
     kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   accessModes:

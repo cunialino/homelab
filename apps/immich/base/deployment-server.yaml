@@ -7,8 +7,6 @@ spec:
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      # The upload PVC is ReadWriteOnce, so a second pod could not attach it while the old one holds
-      # it; a surge pod would sit Pending forever.
       maxSurge: 0
       maxUnavailable: 1
   selector:
@@ -39,9 +37,6 @@ spec:
             secretKeyRef:
               name: immich-db
               key: password
-        # The first boot runs the schema migrations and the pgvector index builds, which is far longer
-        # than a readiness window; without this the pod is killed mid-migration and restarts into the
-        # same race.
         startupProbe:
           httpGet:
             path: /api/server/ping
@@ -63,8 +58,6 @@ spec:
             memory: "512Mi"
             cpu: "250m"
           limits:
-            # ffmpeg transcoding forks per job and is the only thing here that grows; the API itself
-            # idles well under 512Mi.
             memory: "3Gi"
             cpu: "4"
         volumeMounts:

@@ -15,11 +15,7 @@ spec:
     spec:
       containers:
       - name: valkey
-        # Immich's own compose moved from redis to valkey; the wire protocol and the CLI the probes
-        # below call are the valkey ones.
         image: docker.io/valkey/valkey:9
-        # AOF, not RDB snapshots: immich keeps its job queue here, and losing a snapshot interval
-        # would drop the jobs that had not been checkpointed yet.
         command:
         - valkey-server
         - --appendonly

@@ -6,19 +6,8 @@ data:
   DB_HOSTNAME: "pg-cluster-rw.cnpg-system.svc.cluster.local"
   DB_PORT: "5432"
   DB_DATABASE_NAME: "immich"
-  # Immich 3 defaults to VectorChord, which the Postgres server has to preload at startup and is not
-  # in the shared CNPG image. Plain pgvector is still supported (immich picks it up when vchord is
-  # absent) and 0.8.1 is in that image, so the choice is stated rather than left to detection: it
-  # also pins what a future image with vchord built in would not silently change.
   DB_VECTOR_EXTENSION: "pgvector"
-
   REDIS_HOSTNAME: "immich-valkey"
   REDIS_PORT: "6379"
-
-  # The image declares VOLUME /data, so this is also the default; spelled out because the PVC below
-  # has to be mounted at whatever it says.
   IMMICH_MEDIA_LOCATION: "/data"
-
-  # Model weights branch. "main" is the legacy layout immich keeps for installs predating 3.x; the
-  # upstream compose sets v2 for new ones. Read by the machine learning container only.
   MACHINE_LEARNING_MODEL_REVISION: "v2"

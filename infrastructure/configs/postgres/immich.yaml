@@ -8,11 +8,6 @@ spec:
   owner: immich
   cluster:
     name: pg-cluster
-  # pgvector and earthdistance are the two immich needs that PostgreSQL does not mark `trusted`, so
-  # the immich role cannot run CREATE EXTENSION for them however it owns the database; the operator
-  # installs them as superuser instead. cube is here only because earthdistance requires it and would
-  # otherwise be pulled in mid-migration. The rest of immich's set — uuid-ossp, pg_trgm, unaccent — is
-  # trusted and comes with its own migrations.
   extensions:
   - name: vector
     ensure: present

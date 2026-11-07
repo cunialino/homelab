@@ -1,9 +1,5 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-# The namespace transformer is safe here: everything immich owns is in the immich namespace, and the
-# CNPG role credential the operator reads is kept in the postgres layer
-# (infrastructure/configs/postgres/role-secret-immich.yaml) the same way oxicloud's is, so no
-# resource has to state a namespace of its own.
 namespace: immich
 resources:
   - namespace.yaml

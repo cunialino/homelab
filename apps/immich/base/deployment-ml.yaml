@@ -18,9 +18,6 @@ spec:
         app: immich-machine-learning
     spec:
       containers:
-      # The name is not cosmetic: immich's default machine learning URL is
-      # http://immich-machine-learning:3003, so this Deployment and its Service have to carry it for
-      # the server to find inference without a setting in the admin config.
       - name: immich-machine-learning
         image: ghcr.io/immich-app/immich-machine-learning:v3.3.6
         ports:
@@ -29,13 +26,6 @@ spec:
         envFrom:
         - configMapRef:
             name: immich-config
-        # The image sets MACHINE_LEARNING_CACHE_FOLDER=/cache itself; the models are downloaded on
-        # first use, which is why the first smart search job is slow.
-        volumeMounts:
-        - name: model-cache
-          mountPath: /cache
-        # Weights load during container start, which is slower than a plain readiness window allows on
-        # CPU nodes; without this the pod is killed before it can answer once.
         startupProbe:
           httpGet:
             path: /ping
@@ -57,11 +47,11 @@ spec:
             memory: "1Gi"
             cpu: "250m"
           limits:
-            # One worker holds the loaded model plus a decoded batch, and the image's own batch
-            # defaults (4 face crops, 6 OCR pages) are what take it past the request. An OOM kill only
-            # replays the job, so this is headroom rather than a steady need.
             memory: "4Gi"
             cpu: "2"
+        volumeMounts:
+        - name: model-cache
+          mountPath: /cache
       volumes:
       - name: model-cache
         persistentVolumeClaim:

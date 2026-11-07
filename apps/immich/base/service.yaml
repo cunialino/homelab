@@ -16,7 +16,6 @@ kind: Service
 metadata:
   name: immich-machine-learning
 spec:
-  # Name fixed by immich's default machine learning URL, see deployment-ml.yaml.
   selector:
     app: immich-machine-learning
   ports:
@@ -30,7 +29,6 @@ kind: Service
 metadata:
   name: immich-valkey
 spec:
-  # Headless: one replica, and the address only has to resolve to the pod the StatefulSet keeps.
   clusterIP: None
   selector:
     app: immich-valkey

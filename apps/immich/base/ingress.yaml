@@ -3,9 +3,6 @@ kind: Ingress
 metadata:
   name: immich-ingress
   annotations:
-    # Not tailscale-small: uploads of full-resolution photos and videos, and the streaming of both
-    # back to the apps, hold connections open far longer than the request/response traffic the small
-    # proxy class is sized for.
     tailscale.com/proxy-class: "tailscale-stream"
 spec:
   ingressClassName: tailscale
