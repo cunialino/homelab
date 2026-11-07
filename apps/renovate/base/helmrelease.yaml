@@ -99,6 +99,12 @@ spec:
           },
           "packageRules": [
             {
+              "description": "Keep the OxiCloud chart tag and image tag in one PR",
+              "matchManagers": ["flux"],
+              "matchPackageNames": ["oxicloud", "diocrafts/oxicloud"],
+              "groupName": "oxicloud"
+            },
+            {
               "matchDatasources": ["docker"],
               "matchPackageNames": ["custom.io/**"],
               "enabled": false
