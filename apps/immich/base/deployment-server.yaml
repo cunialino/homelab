@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: immich-server
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # The upload PVC is ReadWriteOnce, so a second pod could not attach it while the old one holds
+      # it; a surge pod would sit Pending forever.
+      maxSurge: 0
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: immich-server
+  template:
+    metadata:
+      labels:
+        app: immich-server
+    spec:
+      containers:
+      - name: immich-server
+        image: ghcr.io/immich-app/immich-server:v3.3.6
+        ports:
+        - containerPort: 2283
+          name: http
+        envFrom:
+        - configMapRef:
+            name: immich-config
+        env:
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: immich-db
+              key: username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: immich-db
+              key: password
+        # The first boot runs the schema migrations and the pgvector index builds, which is far longer
+        # than a readiness window; without this the pod is killed mid-migration and restarts into the
+        # same race.
+        startupProbe:
+          httpGet:
+            path: /api/server/ping
+            port: http
+          periodSeconds: 10
+          failureThreshold: 60
+        readinessProbe:
+          httpGet:
+            path: /api/server/ping
+            port: http
+          periodSeconds: 20
+        livenessProbe:
+          httpGet:
+            path: /api/server/ping
+            port: http
+          periodSeconds: 30
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            # ffmpeg transcoding forks per job and is the only thing here that grows; the API itself
+            # idles well under 512Mi.
+            memory: "3Gi"
+            cpu: "4"
+        volumeMounts:
+        - name: upload
+          mountPath: /data
+      volumes:
+      - name: upload
+        persistentVolumeClaim:
+          claimName: immich-upload

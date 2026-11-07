@@ -67,6 +67,17 @@ spec:
         inherit: true
         passwordSecret:
           name: openwebui-db
+      # Not superuser on purpose. Immich asks for it to run pg_dumpall for its in-app database
+      # backups, which is the one feature that stays off; see the app's docs page.
+      - name: immich
+        ensure: present
+        comment: role used for immich
+        login: true
+        superuser: false
+        connectionLimit: -1
+        inherit: true
+        passwordSecret:
+          name: immich-db
 
   storage:
     size: 10Gi

@@ -1,0 +1,33 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: immich
+  namespace: flux-system
+spec:
+  interval: 30m
+  retryInterval: 2m
+  # The machine learning image is around 2 GB and the first boot downloads model weights on top of
+  # running the schema migrations, so the apply is gated on far more than the manifests.
+  timeout: 15m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./apps/immich/base
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  dependsOn:
+    # The server migrates the database at startup: the Database CR and the CNPG role Secret have to
+    # exist before the pod is created, the same way openwebui's do.
+    - name: postgres
+  prune: true
+  # No deletionPolicy: Orphan here, unlike the migrated apps: nothing in Argo CD owns immich, so
+  # deleting this Kustomization is meant to take the app with it. The PVCs are protected on their own
+  # by the prune: disabled annotation.
+  wait: true
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: immich-server
+      namespace: immich

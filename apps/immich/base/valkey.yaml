@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: immich-valkey
+spec:
+  serviceName: immich-valkey
+  replicas: 1
+  selector:
+    matchLabels:
+      app: immich-valkey
+  template:
+    metadata:
+      labels:
+        app: immich-valkey
+    spec:
+      containers:
+      - name: valkey
+        # Immich's own compose moved from redis to valkey; the wire protocol and the CLI the probes
+        # below call are the valkey ones.
+        image: docker.io/valkey/valkey:9
+        # AOF, not RDB snapshots: immich keeps its job queue here, and losing a snapshot interval
+        # would drop the jobs that had not been checkpointed yet.
+        command:
+        - valkey-server
+        - --appendonly
+        - "yes"
+        ports:
+        - containerPort: 6379
+          name: redis
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - valkey-cli ping | grep -q PONG
+          periodSeconds: 10
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - valkey-cli ping | grep -q PONG
+          initialDelaySeconds: 10
+          periodSeconds: 20
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: data
+          mountPath: /data
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      storageClassName: longhorn-wdblack
+      resources:
+        requests:
+          storage: 2Gi

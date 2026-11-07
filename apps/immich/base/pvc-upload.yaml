@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: immich-upload
+  annotations:
+    # Originals live here. Flux pruning this claim would delete the volume it binds, so it has to
+    # outlive the app definition.
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn-wdblack
+  resources:
+    requests:
+      storage: 20Gi

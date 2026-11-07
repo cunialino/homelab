@@ -19,6 +19,8 @@ resources:
   - lakekeeper.yaml
   - oxicloud.yaml
   - vikunja.yaml
+  - immich.yaml
+  - role-secret-immich.yaml
   - role-secret-lakekeeper.yaml
   - role-secret-openwebui.yaml
   - role-secret-oxicloud.yaml
