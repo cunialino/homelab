@@ -13,7 +13,7 @@ spec:
     spec:
       chart: renovate
       # pinned, never a semver range: Renovate's own flux manager bumps this field and nothing else
-      version: 46.366.7
+      version: 46.417.0
       sourceRef:
         kind: HelmRepository
         name: renovate
