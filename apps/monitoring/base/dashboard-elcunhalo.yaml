@@ -19,10 +19,21 @@
 #   job=llama-decision  llama-decision.service (:11436), up continuously. No preset, no service;
 #                       whether the swap manages it is not visible from the metrics.
 #
-# The speed gauges (prompt_tokens_seconds, predicted_tokens_seconds) are per SESSION, held
-# from the last measured request: with two sessions running the gauge falls while delivered
-# throughput rises. Nothing in /metrics breaks tokens down per slot, so a per-session line
-# cannot be built - requests_processing is the only concurrency signal every build exposes.
+# Every tok/s here comes from counters, never from the prompt_tokens_seconds / predicted_tokens_seconds
+# gauges: a gauge holds the last completed request indefinitely, so an idle box keeps reporting the
+# speed of a request finished hours ago. Two readings per model instead:
+#   delivered    tokens per second of wall clock, idle time included.
+#   per session  tokens per second of the server's own busy time - prompt_seconds_total and
+#                tokens_predicted_seconds_total, which tick once per completed request and sum
+#                across slots, so this stays the real per-request speed even when two sessions
+#                share the GPU. gufo-llm over 24h: 2.0 delivered, 46.5 per session.
+# Per session is written increase()/increase() so its guard reads in seconds. Prefill demands 10s of
+# evaluation time inside the window: with a bare > 0 guard the 30m panel peaks at 26544 tok/s against
+# a 980 median over a week, the floor brings the peak to 5936 and leaves the median where it was.
+# Decode needs no floor (0 to 180s of floor all read a 47 tok/s median).
+# Both readings are absent, not zero, for a model that did no work: a cold preset exposes no counters
+# at all. requests_processing is the only concurrency signal every build exposes (n_busy_slots_per_decode is
+# llama-decision only), and it stops at the slot count - requests_deferred carries whatever is waiting behind it.
 #   amdgpu_*            /run/alloy/textfile/amdgpu.prom
 #   node_*              prometheus.exporter.unix
 #
@@ -82,24 +93,26 @@ data:
         { "type": "row", "id": 100, "title": "Overview", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "panels": [] },
         {
           "type": "stat", "id": 1, "title": "Decode (TG)",
-          "description": "Fastest reporting server's generation speed, from llama.cpp's own gauge. A gauge holds the last completed request until the next one, so this is the latest measured speed, not a live average.",
+          "description": "Whole box over the selected window. delivered = generated tokens per second of wall clock, idle time included, so it reads 0 when nothing generated. per session = tokens per second of generation time, so two sessions sharing the GPU do not halve it; it needs a completed generation to exist and is blank otherwise.",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
           "gridPos": { "h": 5, "w": 6, "x": 0, "y": 1 },
-          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "textMode": "auto" },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "name_and_value" },
           "fieldConfig": { "defaults": { "unit": "short", "decimals": 1, "min": 0, "noValue": "idle", "color": { "mode": "fixed", "fixedColor": "green" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "text", "value": null } ] } }, "overrides": [] },
           "targets": [
-            { "refId": "A", "legendFormat": "decode", "expr": "max(llamacpp:predicted_tokens_seconds)" }
+            { "refId": "A", "instant": true, "legendFormat": "delivered", "expr": "sum(rate(llamacpp:tokens_predicted_total{job=~\"llamacpp|gufo|llama-decision\"}[$__range]))" },
+            { "refId": "B", "instant": true, "legendFormat": "per session", "expr": "sum(increase(llamacpp:tokens_predicted_total{job=~\"llamacpp|gufo|llama-decision\"}[$__range]))\n/\n(sum(increase(llamacpp:tokens_predicted_seconds_total{job=~\"llamacpp|gufo|llama-decision\"}[$__range])) > 0)" }
           ]
         },
         {
           "type": "stat", "id": 2, "title": "Prefill (PP)",
-          "description": "Fastest reporting server's prompt-evaluation speed, from llama.cpp's own gauge. Cache hits are excluded, so this is recomputation only.",
+          "description": "Whole box over the selected window, same two readings as Decode. Cache hits excluded, so this is recomputation only. The per-session reading needs 10s of measured prompt evaluation inside the window, otherwise one warm-up prompt divides by a rounding error.",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
           "gridPos": { "h": 5, "w": 6, "x": 6, "y": 1 },
-          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "area", "textMode": "auto" },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "name_and_value" },
           "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "min": 0, "noValue": "idle", "color": { "mode": "fixed", "fixedColor": "blue" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "text", "value": null } ] } }, "overrides": [] },
           "targets": [
-            { "refId": "A", "legendFormat": "prefill", "expr": "max(llamacpp:prompt_tokens_seconds)" }
+            { "refId": "A", "instant": true, "legendFormat": "delivered", "expr": "sum(rate(llamacpp:prompt_tokens_total{job=~\"llamacpp|gufo|llama-decision\"}[$__range]))" },
+            { "refId": "B", "instant": true, "legendFormat": "per session", "expr": "sum(increase(llamacpp:prompt_tokens_total{job=~\"llamacpp|gufo|llama-decision\"}[$__range]))\n/\n(sum(increase(llamacpp:prompt_seconds_total{job=~\"llamacpp|gufo|llama-decision\"}[$__range])) > 10)" }
           ]
         },
         {
@@ -197,23 +210,70 @@ data:
           ]
         },
         {
-          "type": "timeseries", "id": 30, "title": "Sessions in flight",
-          "description": "requests_processing per model. This is what makes per-session speed fall while delivered throughput rises; llama.cpp exposes no per-slot token counters, so sessions cannot be broken out individually.",
+          "type": "timeseries", "id": 30, "title": "Sessions and deferred requests",
+          "description": "requests_processing per model (solid) is what makes per-session speed fall while delivered rises, but it saturates at the server's slot count - gufo-llm has 2, so it reads 2 whether two requests are running or two are running with eight waiting. deferred (red, dashed) is that backlog: llama.cpp parks a request when get_available_slot() returns nullptr and the gauge is the length of that queue. On this box deferred was above 0 in 232 scrapes over a week and 231 of them saw requests_processing pinned at 2, peak 8 waiting. A deferred request has not started, so it burns wall clock while contributing no busy seconds: per-session speed stays honest through a backlog while delivered thins out. Sessions still cannot be broken out individually - llama.cpp exposes no per-slot token counters.",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
           "gridPos": { "h": 8, "w": 8, "x": 16, "y": 11 },
           "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
-          "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 20, "showPoints": "never", "spanNulls": false } }, "overrides": [] },
+          "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 20, "showPoints": "never", "spanNulls": false } }, "overrides": [
+            { "matcher": { "id": "byRegexp", "options": "deferred .*" }, "properties": [ { "id": "custom.dash" }, { "id": "custom.fillOpacity", "value": 0 }, { "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } } ] }
+          ] },
           "targets": [
-            { "refId": "A", "legendFormat": "{{model}}", "expr": "max by (model) (label_replace(llamacpp:requests_processing{job=\"llamacpp\", preset=~\"$preset\"}, \"model\", \"$1\", \"preset\", \"(.+)\"))\nor\nmax by (model) (label_replace(llamacpp:requests_processing{job=\"gufo\", service=\"gufo-llm.service\"}, \"model\", \"$1\", \"service\", \"(.*)[.]service\"))\nor\nmax by (model) (label_replace(llamacpp:requests_processing{job=\"llama-decision\"}, \"model\", \"decision\", \"model\", \".*\"))" }
+            { "refId": "A", "legendFormat": "{{model}}", "expr": "max by (model) (label_replace(llamacpp:requests_processing{job=\"llamacpp\", preset=~\"$preset\"}, \"model\", \"$1\", \"preset\", \"(.+)\"))\nor\nmax by (model) (label_replace(llamacpp:requests_processing{job=\"gufo\", service!=\"gufo-image.service\"}, \"model\", \"$1\", \"service\", \"(.*)[.]service\"))\nor\nmax by (model) (label_replace(llamacpp:requests_processing{job=\"llama-decision\"}, \"model\", \"decision\", \"model\", \".*\"))" },
+            { "refId": "B", "legendFormat": "deferred {{model}}", "expr": "max by (model) (label_replace(llamacpp:requests_deferred{job=\"llamacpp\", preset=~\"$preset\"}, \"model\", \"$1\", \"preset\", \"(.+)\"))\nor\nmax by (model) (label_replace(llamacpp:requests_deferred{job=\"gufo\", service!=\"gufo-image.service\"}, \"model\", \"$1\", \"service\", \"(.*)[.]service\"))\nor\nmax by (model) (label_replace(llamacpp:requests_deferred{job=\"llama-decision\"}, \"model\", \"decision\", \"model\", \".*\"))" }
           ]
         },
 
         { "type": "row", "id": 101, "title": "Per model throughput", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 19 }, "panels": [] },
         {
-          "type": "timeseries", "id": 7, "title": "Prefill (PP) - per-session vs delivered",
-          "description": "Solid line: prompt-evaluation speed of the last measured request, straight from the server's own gauge - one line per model, held frozen while that server is idle. Dashed line: prompt tokens per second of wall clock summed over every session. With two sessions the solid line drops as the GPU is shared while the dashed line rises; the two only coincide with a single busy session. Not rate(tokens)/rate(seconds): those counters advance in different scrapes, so that ratio returns +Inf.",
+          "type": "stat", "id": 31, "title": "Prefill (PP) - overall per model",
+          "description": "Prompt tokens per second of wall clock per model across the whole selected window, idle time included. Recomputation only - cache hits are counted separately. A model missing here did no prefill in the window.",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 20 },
+          "gridPos": { "h": 5, "w": 6, "x": 0, "y": 20 },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "name_and_value" },
+          "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "min": 0, "noValue": "no prefill", "color": { "mode": "palette-classic" } }, "overrides": [] },
+          "targets": [
+            { "refId": "A", "instant": true, "legendFormat": "{{model}}", "expr": "sum by (model) (label_replace(rate(llamacpp:prompt_tokens_total{job=\"llamacpp\", preset=~\"$preset\"}[$__range]), \"model\", \"$1\", \"preset\", \"(.+)\"))\nor\nsum by (model) (label_replace(rate(llamacpp:prompt_tokens_total{job=\"gufo\"}[$__range]), \"model\", \"$1\", \"service\", \"(.*)[.]service\"))\nor\nsum by (model) (label_replace(rate(llamacpp:prompt_tokens_total{job=\"llama-decision\"}[$__range]), \"model\", \"decision\", \"model\", \".*\"))" }
+          ]
+        },
+        {
+          "type": "stat", "id": 32, "title": "Prefill (PP) - per session per model",
+          "description": "Prompt tokens divided by prompt-evaluation seconds per model over the window, so two concurrent sessions read the same as one. The 10s floor on evaluation time is load-bearing: without it a single warm-up prompt read 26544 tok/s against a 980 tok/s median, and llama-decision's median moved 4140 to 2787 once only properly-sized prompts counted. No value means less than 10s of prompt evaluation finished in the window.",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 5, "w": 6, "x": 6, "y": 20 },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "name_and_value" },
+          "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "min": 0, "noValue": "no completed prompt", "color": { "mode": "palette-classic" } }, "overrides": [] },
+          "targets": [
+            { "refId": "A", "instant": true, "legendFormat": "{{model}}", "expr": "sum by (model) (label_replace(increase(llamacpp:prompt_tokens_total{job=\"llamacpp\", preset=~\"$preset\"}[$__range]), \"model\", \"$1\", \"preset\", \"(.+)\"))\n/\n(sum by (model) (label_replace(increase(llamacpp:prompt_seconds_total{job=\"llamacpp\", preset=~\"$preset\"}[$__range]), \"model\", \"$1\", \"preset\", \"(.+)\")) > 10)\nor\nsum by (model) (label_replace(increase(llamacpp:prompt_tokens_total{job=\"gufo\"}[$__range]), \"model\", \"$1\", \"service\", \"(.*)[.]service\"))\n/\n(sum by (model) (label_replace(increase(llamacpp:prompt_seconds_total{job=\"gufo\"}[$__range]), \"model\", \"$1\", \"service\", \"(.*)[.]service\")) > 10)\nor\nsum by (model) (label_replace(increase(llamacpp:prompt_tokens_total{job=\"llama-decision\"}[$__range]), \"model\", \"decision\", \"model\", \".*\"))\n/\n(sum by (model) (label_replace(increase(llamacpp:prompt_seconds_total{job=\"llama-decision\"}[$__range]), \"model\", \"decision\", \"model\", \".*\")) > 10)" }
+          ]
+        },
+        {
+          "type": "stat", "id": 33, "title": "Decode (TG) - overall per model",
+          "description": "Generated tokens per second of wall clock per model across the whole selected window, so it reads 0 for a resident model that generated nothing. Small next to a healthy per-session number means the model sat idle for most of the window, not that it was slow.",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 5, "w": 6, "x": 12, "y": 20 },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "name_and_value" },
+          "fieldConfig": { "defaults": { "unit": "short", "decimals": 1, "min": 0, "noValue": "no generation", "color": { "mode": "palette-classic" } }, "overrides": [] },
+          "targets": [
+            { "refId": "A", "instant": true, "legendFormat": "{{model}}", "expr": "sum by (model) (label_replace(rate(llamacpp:tokens_predicted_total{job=\"llamacpp\", preset=~\"$preset\"}[$__range]), \"model\", \"$1\", \"preset\", \"(.+)\"))\nor\nsum by (model) (label_replace(rate(llamacpp:tokens_predicted_total{job=\"gufo\"}[$__range]), \"model\", \"$1\", \"service\", \"(.*)[.]service\"))\nor\nsum by (model) (label_replace(rate(llamacpp:tokens_predicted_total{job=\"llama-decision\"}[$__range]), \"model\", \"decision\", \"model\", \".*\"))" }
+          ]
+        },
+        {
+          "type": "stat", "id": 34, "title": "Decode (TG) - per session per model",
+          "description": "Generated tokens divided by generation seconds per model over the window. Concurrency does not halve it. No floor here, unlike prefill: the same panel with floors from 0 to 180s of generation time reads a 47 tok/s median and a 92 tok/s max either way, because generation runs long enough to average itself. Absent means no generation finished inside the window - check residency for that preset.",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 5, "w": 6, "x": 18, "y": 20 },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none", "textMode": "name_and_value" },
+          "fieldConfig": { "defaults": { "unit": "short", "decimals": 1, "min": 0, "noValue": "no completed generation", "color": { "mode": "palette-classic" } }, "overrides": [] },
+          "targets": [
+            { "refId": "A", "instant": true, "legendFormat": "{{model}}", "expr": "sum by (model) (label_replace(increase(llamacpp:tokens_predicted_total{job=\"llamacpp\", preset=~\"$preset\"}[$__range]), \"model\", \"$1\", \"preset\", \"(.+)\"))\n/\n(sum by (model) (label_replace(increase(llamacpp:tokens_predicted_seconds_total{job=\"llamacpp\", preset=~\"$preset\"}[$__range]), \"model\", \"$1\", \"preset\", \"(.+)\")) > 0)\nor\nsum by (model) (label_replace(increase(llamacpp:tokens_predicted_total{job=\"gufo\"}[$__range]), \"model\", \"$1\", \"service\", \"(.*)[.]service\"))\n/\n(sum by (model) (label_replace(increase(llamacpp:tokens_predicted_seconds_total{job=\"gufo\"}[$__range]), \"model\", \"$1\", \"service\", \"(.*)[.]service\")) > 0)\nor\nsum by (model) (label_replace(increase(llamacpp:tokens_predicted_total{job=\"llama-decision\"}[$__range]), \"model\", \"decision\", \"model\", \".*\"))\n/\n(sum by (model) (label_replace(increase(llamacpp:tokens_predicted_seconds_total{job=\"llama-decision\"}[$__range]), \"model\", \"decision\", \"model\", \".*\")) > 0)" }
+          ]
+        },
+        {
+          "type": "timeseries", "id": 7, "title": "Prefill (PP) - per session vs delivered",
+          "description": "Solid: prompt tokens per second of prompt-evaluation time per model over a fixed 30m window. Dashed: the same tokens over wall clock, so the gap between the two is idle time. The per-session line holds its level when sessions overlap (the seconds counter sums across slots) and needs 10s of evaluation time in the window, otherwise one small prompt reports tens of thousands of tok/s. Cached prompt tokens are in neither line.",
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 25 },
           "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max", "mean"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
           "fieldConfig": { "defaults": { "unit": "short", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 12, "showPoints": "never", "spanNulls": false } }, "overrides": [
             { "matcher": { "id": "byRegexp", "options": "delivered .*" }, "properties": [ { "id": "custom.dash" }, { "id": "custom.fillOpacity", "value": 0 }, { "id": "custom.lineWidth", "value": 1 } ] }
@@ -221,8 +281,8 @@ data:
           "targets": [
             {
               "refId": "A",
-              "legendFormat": "{{model}}",
-              "expr": "max by (model) (label_replace(llamacpp:prompt_tokens_seconds{job=\"llamacpp\", preset=~\"$preset\"}, \"model\", \"$1\", \"preset\", \"(.+)\"))\nor\nmax by (model) (label_replace(llamacpp:prompt_tokens_seconds{job=\"gufo\", service=\"gufo-llm.service\"}, \"model\", \"$1\", \"service\", \"(.*)[.]service\"))\nor\nmax by (model) (label_replace(llamacpp:prompt_tokens_seconds{job=\"llama-decision\"}, \"model\", \"decision\", \"model\", \".*\"))"
+              "legendFormat": "per session {{model}}",
+              "expr": "sum by (model) (label_replace(increase(llamacpp:prompt_tokens_total{job=\"llamacpp\", preset=~\"$preset\"}[30m]), \"model\", \"$1\", \"preset\", \"(.+)\"))\n/\n(sum by (model) (label_replace(increase(llamacpp:prompt_seconds_total{job=\"llamacpp\", preset=~\"$preset\"}[30m]), \"model\", \"$1\", \"preset\", \"(.+)\")) > 10)\nor\nsum by (model) (label_replace(increase(llamacpp:prompt_tokens_total{job=\"gufo\"}[30m]), \"model\", \"$1\", \"service\", \"(.*)[.]service\"))\n/\n(sum by (model) (label_replace(increase(llamacpp:prompt_seconds_total{job=\"gufo\"}[30m]), \"model\", \"$1\", \"service\", \"(.*)[.]service\")) > 10)\nor\nsum by (model) (label_replace(increase(llamacpp:prompt_tokens_total{job=\"llama-decision\"}[30m]), \"model\", \"decision\", \"model\", \".*\"))\n/\n(sum by (model) (label_replace(increase(llamacpp:prompt_seconds_total{job=\"llama-decision\"}[30m]), \"model\", \"decision\", \"model\", \".*\")) > 10)"
             },
             {
               "refId": "B",
@@ -232,10 +292,10 @@ data:
           ]
         },
         {
-          "type": "timeseries", "id": 8, "title": "Decode (TG) - per-session vs delivered",
-          "description": "Solid: generation speed of the last measured request per model, frozen while idle. Dashed: generated tokens per second of wall clock across all sessions. Two concurrent sessions share the GPU, so the solid line sags while the dashed line climbs. Gaps mean the model was not resident.",
+          "type": "timeseries", "id": 8, "title": "Decode (TG) - per session vs delivered",
+          "description": "Solid: generated tokens per second of generation time per model over a fixed 30m window. Dashed: generated tokens per second of wall clock. A generation still in flight shows in the dashed line only, since the seconds counter ticks on completion; gaps mean the model was not resident or finished nothing in that window.",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 20 },
+          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 25 },
           "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max", "mean"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
           "fieldConfig": { "defaults": { "unit": "short", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 12, "showPoints": "never", "spanNulls": false } }, "overrides": [
             { "matcher": { "id": "byRegexp", "options": "delivered .*" }, "properties": [ { "id": "custom.dash" }, { "id": "custom.fillOpacity", "value": 0 }, { "id": "custom.lineWidth", "value": 1 } ] }
@@ -243,8 +303,8 @@ data:
           "targets": [
             {
               "refId": "A",
-              "legendFormat": "{{model}}",
-              "expr": "max by (model) (label_replace(llamacpp:predicted_tokens_seconds{job=\"llamacpp\", preset=~\"$preset\"}, \"model\", \"$1\", \"preset\", \"(.+)\"))\nor\nmax by (model) (label_replace(llamacpp:predicted_tokens_seconds{job=\"gufo\", service=\"gufo-llm.service\"}, \"model\", \"$1\", \"service\", \"(.*)[.]service\"))\nor\nmax by (model) (label_replace(llamacpp:predicted_tokens_seconds{job=\"llama-decision\"}, \"model\", \"decision\", \"model\", \".*\"))"
+              "legendFormat": "per session {{model}}",
+              "expr": "sum by (model) (label_replace(increase(llamacpp:tokens_predicted_total{job=\"llamacpp\", preset=~\"$preset\"}[30m]), \"model\", \"$1\", \"preset\", \"(.+)\"))\n/\n(sum by (model) (label_replace(increase(llamacpp:tokens_predicted_seconds_total{job=\"llamacpp\", preset=~\"$preset\"}[30m]), \"model\", \"$1\", \"preset\", \"(.+)\")) > 0)\nor\nsum by (model) (label_replace(increase(llamacpp:tokens_predicted_total{job=\"gufo\"}[30m]), \"model\", \"$1\", \"service\", \"(.*)[.]service\"))\n/\n(sum by (model) (label_replace(increase(llamacpp:tokens_predicted_seconds_total{job=\"gufo\"}[30m]), \"model\", \"$1\", \"service\", \"(.*)[.]service\")) > 0)\nor\nsum by (model) (label_replace(increase(llamacpp:tokens_predicted_total{job=\"llama-decision\"}[30m]), \"model\", \"decision\", \"model\", \".*\"))\n/\n(sum by (model) (label_replace(increase(llamacpp:tokens_predicted_seconds_total{job=\"llama-decision\"}[30m]), \"model\", \"decision\", \"model\", \".*\")) > 0)"
             },
             {
               "refId": "B",
@@ -257,7 +317,7 @@ data:
           "type": "timeseries", "id": 11, "title": "Tokens generated per 10m",
           "description": "Volume rather than speed. Undercounted for any preset that came and went between scrapes - see Coverage.",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "gridPos": { "h": 8, "w": 6, "x": 0, "y": 29 },
+          "gridPos": { "h": 8, "w": 6, "x": 0, "y": 34 },
           "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "sum"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
           "fieldConfig": { "defaults": { "unit": "short", "min": 0, "custom": { "drawStyle": "bars", "lineWidth": 1, "fillOpacity": 70, "showPoints": "never" } }, "overrides": [] },
           "targets": [
@@ -272,7 +332,7 @@ data:
           "type": "timeseries", "id": 9, "title": "Prompt cache hit rate",
           "description": "cached / (cached + computed) per model, over a fixed 30m window, and only where at least 10k prompt tokens were seen in that window. Both conditions are needed: a short window reads a false 0% or 100% because the two counters move in bursts, and a low-volume window lets one small uncached prompt report 0% for a server that is really hitting its cache about 95% of the time. Check the mean of this line against cached / (cached + computed) on the raw counters before believing a dip.",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "gridPos": { "h": 8, "w": 6, "x": 6, "y": 29 },
+          "gridPos": { "h": 8, "w": 6, "x": 6, "y": 34 },
           "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "mean"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
           "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": false } }, "overrides": [] },
           "targets": [
@@ -287,7 +347,7 @@ data:
           "type": "timeseries", "id": 10, "title": "Speculative decode acceptance",
           "description": "accepted / drafted tokens per model over a fixed 15m window; below roughly 0.4 the draft model is mostly wasted compute. Servers without a draft model produce no line at all.",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "gridPos": { "h": 8, "w": 6, "x": 12, "y": 29 },
+          "gridPos": { "h": 8, "w": 6, "x": 12, "y": 34 },
           "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "mean"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
           "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never", "spanNulls": false } }, "overrides": [] },
           "targets": [
@@ -298,7 +358,7 @@ data:
           "type": "timeseries", "id": 29, "title": "KV cache usage",
           "description": "Approaching 1 forces evictions, which collapses prefill speed and looks like the model got slower. Only some llama.cpp builds export this - gufo-llm today - so a missing line means the metric is absent, not that the cache is empty.",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "gridPos": { "h": 8, "w": 6, "x": 18, "y": 29 },
+          "gridPos": { "h": 8, "w": 6, "x": 18, "y": 34 },
           "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
           "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 15, "showPoints": "never", "spanNulls": false }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "yellow", "value": 0.75 }, { "color": "red", "value": 0.9 } ] } }, "overrides": [] },
           "targets": [
@@ -306,12 +366,12 @@ data:
           ]
         },
 
-        { "type": "row", "id": 102, "title": "GPU - amdgpu (Strix Halo)", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 37 }, "panels": [] },
+        { "type": "row", "id": 102, "title": "GPU - amdgpu (Strix Halo)", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 42 }, "panels": [] },
         {
           "type": "timeseries", "id": 12, "title": "Compute utilisation",
           "description": "Whole-card busy_percent plus per-engine utilisation (gfx, mediaengine).",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 38 },
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 43 },
           "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max", "mean"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
           "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 15, "showPoints": "never" } }, "overrides": [] },
           "targets": [
@@ -323,7 +383,7 @@ data:
           "type": "timeseries", "id": 14, "title": "GPU memory pools",
           "description": "GTT is where model weights live. amdgpu_vram_total_bytes is a fixed 1 GiB aperture on this APU, so GTT is the only honest denominator.",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "gridPos": { "h": 8, "w": 10, "x": 8, "y": 38 },
+          "gridPos": { "h": 8, "w": 10, "x": 8, "y": 43 },
           "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
           "fieldConfig": { "defaults": { "unit": "bytes", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 15, "showPoints": "never" } }, "overrides": [] },
           "targets": [
@@ -337,7 +397,7 @@ data:
           "type": "gauge", "id": 13, "title": "GTT fill",
           "description": "Approaching 1 leaves no room for the next model without evicting one.",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "gridPos": { "h": 8, "w": 6, "x": 18, "y": 38 },
+          "gridPos": { "h": 8, "w": 6, "x": 18, "y": 43 },
           "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showThresholdLabels": false, "showThresholdMarkers": true },
           "fieldConfig": { "defaults": { "unit": "percentunit", "decimals": 1, "min": 0, "max": 1, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "yellow", "value": 0.8 }, { "color": "red", "value": 0.92 } ] } }, "overrides": [] },
           "targets": [
@@ -348,7 +408,7 @@ data:
           "type": "timeseries", "id": 15, "title": "Power draw",
           "description": "source=average only: average, gfx and input report the same value and would triple the legend.",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "gridPos": { "h": 7, "w": 6, "x": 0, "y": 46 },
+          "gridPos": { "h": 7, "w": 6, "x": 0, "y": 51 },
           "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max", "mean"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
           "fieldConfig": { "defaults": { "unit": "watt", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 15, "showPoints": "never" } }, "overrides": [] },
           "targets": [
@@ -359,7 +419,7 @@ data:
           "type": "timeseries", "id": 16, "title": "Temperatures",
           "description": "GPU edge sensor plus host hwmon (k10temp CPU, nvme, acpitz).",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "gridPos": { "h": 7, "w": 10, "x": 6, "y": 46 },
+          "gridPos": { "h": 7, "w": 10, "x": 6, "y": 51 },
           "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
           "fieldConfig": { "defaults": { "unit": "celsius", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "yellow", "value": 85 }, { "color": "red", "value": 95 } ] } }, "overrides": [] },
           "targets": [
@@ -370,7 +430,7 @@ data:
         {
           "type": "timeseries", "id": 17, "title": "Clocks",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "gridPos": { "h": 7, "w": 8, "x": 16, "y": 46 },
+          "gridPos": { "h": 7, "w": 8, "x": 16, "y": 51 },
           "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
           "fieldConfig": { "defaults": { "unit": "hertz", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 10, "showPoints": "never" } }, "overrides": [] },
           "targets": [
@@ -378,12 +438,12 @@ data:
           ]
         },
 
-        { "type": "row", "id": 103, "title": "Memory and host", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 53 }, "panels": [] },
+        { "type": "row", "id": 103, "title": "Memory and host", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 58 }, "panels": [] },
         {
           "type": "timeseries", "id": 18, "title": "Memory per process",
           "description": "amdgpu_process_* is labelled with comm and the systemd unit, so a model that will not evict shows up by name.",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "gridPos": { "h": 7, "w": 12, "x": 0, "y": 54 },
+          "gridPos": { "h": 7, "w": 12, "x": 0, "y": 59 },
           "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
           "fieldConfig": { "defaults": { "unit": "bytes", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 15, "showPoints": "never" } }, "overrides": [] },
           "targets": [
@@ -395,7 +455,7 @@ data:
           "type": "timeseries", "id": 19, "title": "Host CPU, RAM and GPU-held RAM",
           "description": "GPUActive is the slice of unified memory the driver pins for the GPU - the reason MemAvailable looks low on a loaded box.",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "gridPos": { "h": 7, "w": 12, "x": 12, "y": 54 },
+          "gridPos": { "h": 7, "w": 12, "x": 12, "y": 59 },
           "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
           "fieldConfig": { "defaults": { "unit": "bytes", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 12, "showPoints": "never" } }, "overrides": [
             { "matcher": { "id": "byName", "options": "CPU busy" }, "properties": [ { "id": "unit", "value": "percent" }, { "id": "max", "value": 100 }, { "id": "custom.axisPlacement", "value": "right" } ] }
@@ -408,12 +468,12 @@ data:
           ]
         },
 
-        { "type": "row", "id": 104, "title": "Scrape targets and failure signals", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 61 }, "panels": [] },
+        { "type": "row", "id": 104, "title": "Scrape targets and failure signals", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 66 }, "panels": [] },
         {
           "type": "table", "id": 28, "title": "Swap preset scrape targets",
           "description": "Preset to fixed port and unit, straight from the scrape. A port only answers while resident, so up=0 is cold rather than broken. Presets llama-swap serves but that do not appear here are invisible to this dashboard.",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "gridPos": { "h": 8, "w": 10, "x": 0, "y": 62 },
+          "gridPos": { "h": 8, "w": 10, "x": 0, "y": 67 },
           "options": { "showHeader": true, "cellHeight": "sm", "footer": { "show": false } },
           "fieldConfig": { "defaults": { "custom": { "align": "auto", "filterable": true } }, "overrides": [
             { "matcher": { "id": "byName", "options": "Value" }, "properties": [ { "id": "displayName", "value": "resident" }, { "id": "mappings", "value": [ { "type": "value", "options": { "1": { "text": "LOADED", "color": "green" }, "0": { "text": "cold", "color": "transparent" } } } ] } ] },
@@ -431,19 +491,19 @@ data:
           "type": "stat", "id": 20, "title": "Loopback scrape targets",
           "description": "Everything elcunhalo scrapes on 127.0.0.1, swap presets excluded since they have their own table. A preset's port is expected to refuse connections when cold.",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "gridPos": { "h": 8, "w": 14, "x": 10, "y": 62 },
+          "gridPos": { "h": 8, "w": 14, "x": 10, "y": 67 },
           "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "name_and_value", "colorMode": "background", "graphMode": "none" },
           "fieldConfig": { "defaults": { "unit": "short", "mappings": [ { "type": "value", "options": { "1": { "text": "UP", "color": "green" }, "0": { "text": "DOWN", "color": "red" } } } ], "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] } }, "overrides": [] },
           "targets": [
             { "refId": "A", "instant": true, "legendFormat": "{{job}} {{service}}", "expr": "up{instance=~\"127[.]0[.]0[.]1:.*\",job!~\"llamacpp|alloy\"}" }
           ]
         },
-        { "type": "row", "id": 106, "title": "Collector health", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 70 }, "panels": [] },
+        { "type": "row", "id": 106, "title": "Collector health", "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 75 }, "panels": [] },
         {
           "type": "timeseries", "id": 21, "title": "Failure signals",
           "description": "OOM kills, GPU device loss, textfile collector error flag and per-file age of /run/alloy/textfile. The textfile collector keeps re-serving a file it can no longer refresh, so age is the only way to tell live readings from a stale one.",
           "datasource": { "type": "prometheus", "uid": "prometheus" },
-          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 71 },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 76 },
           "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "max"] }, "tooltip": { "mode": "multi", "sort": "desc" } },
           "fieldConfig": { "defaults": { "unit": "short", "min": 0, "custom": { "drawStyle": "line", "lineWidth": 2, "fillOpacity": 20, "showPoints": "auto" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } }, "overrides": [
             { "matcher": { "id": "byRegexp", "options": "textfile age.*" }, "properties": [ { "id": "unit", "value": "s" }, { "id": "custom.axisPlacement", "value": "right" }, { "id": "custom.drawStyle", "value": "line" }, { "id": "custom.fillOpacity", "value": 0 }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 300 } ] } } ] }

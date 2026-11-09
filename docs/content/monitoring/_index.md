@@ -27,8 +27,9 @@ Grafana provides powerful dashboards for visualizing my metrics.
     [apps/monitoring/base/](https://github.com/cunialino/homelab/tree/main/apps/monitoring/base/) — no chart values change and no UI import.
     Referencing the provisioned datasource by its stable `uid: prometheus` (rather than by name) keeps the panels intact across reinstalls.
 *   **elcunhalo LLM dashboard** ([apps/monitoring/base/dashboard-elcunhalo.yaml](https://github.com/cunialino/homelab/tree/main/apps/monitoring/base/dashboard-elcunhalo.yaml),
-    uid `elcunhalo-llm`): prefill and decode token throughput, prompt-cache hit rate, KV cache pressure, speculative-decode acceptance,
-    preset residency and scrape coverage, plus GPU utilisation, power, clocks, temperatures and per-process memory.
+    uid `elcunhalo-llm`): prefill and decode throughput per model — both delivered and per session — prompt-cache hit rate, KV cache pressure,
+    speculative-decode acceptance, preset residency, scrape coverage and request backlog, plus GPU utilisation, power, clocks, temperatures and
+    per-process memory.
     The quirks that shaped it:
     *   **Residency is `up`, not a gauge.** A llama-swap preset's port only listens while that model is resident, so `up` *is* the residency
         signal and a cold preset refuses the connection rather than being woken — waking one with a scrape is what caused the original
@@ -38,21 +39,31 @@ Grafana provides powerful dashboards for visualizing my metrics.
         `job=~"llamacpp|gufo", service!="gufo-image.service"` and synthesise the missing `preset` label — before that the residency row showed
         1–4% coverage while the box was actually near 15%, because the backend carrying most of the traffic was filtered out.
         `llama-decision.service` is **not** swap-managed: it stays out of the residency row and appears as its own `model` elsewhere.
-    *   **Two different tok/s, deliberately shown together.** The server's `prompt_tokens_seconds` / `predicted_tokens_seconds` gauges are
-        **per session** — the last measured request — and hold their value while a server idles. `rate(tokens_total)` is **delivered** throughput,
-        summed over every session against wall clock. With two concurrent sessions the per-session line sags as the GPU is shared while the
-        delivered line climbs; measured live they were 27 tok/s and 35 tok/s at the same moment. Both are on the prefill and decode panels
-        (per-session solid, delivered dashed), and *Sessions in flight* plots `requests_processing` to explain the gap. Per-session numbers
-        cannot be broken out individually: llama.cpp exposes no per-slot token counters, and `n_busy_slots_per_decode` is missing from the
-        gufo build.
+    *   **Two tok/s per model, both from counters.** **delivered** is `rate(tokens_total)` against wall clock, idle time included; **per session** is
+        `increase(tokens) / increase(*_seconds_total)` — the server's own busy time. That counter accumulates per slot (`tokens_predicted_seconds_total` was
+        measured advancing up to 2.58 s per wall second, and 0.886 s/s median with two sessions against 0.36 with one), so the ratio is each session's
+        speed rather than the sum. gufo-llm over 24h measured **2.0 delivered against 46.5 per session**: the gap is idle time, not a slow model. Four
+        stat panels give both numbers per model for whatever window is selected, and the prefill and decode series plot them together (per session solid,
+        delivered dashed). A model that did no work produces no series rather than a zero, because a cold preset exposes no counters at all — an absent
+        model is missing data, not a slow one. Per-session still cannot be split slot by slot: llama.cpp has no per-slot token counters and
+        `n_busy_slots_per_decode` is missing from the gufo build.
+    *   **Two agents cost each other speed, and the queue is invisible until you ask for it.** With `requests_processing` at 2, gufo-llm's per-session
+        decode measured a 38.1 tok/s median against **53.0 solo** while delivered went the other way (12.1 → 32.7 median) — the drop is real contention,
+        not a metric artifact, and decode barely scales: 51 tok/s solo max versus 57.5 with both slots busy, because generation is memory-bandwidth bound.
+        Prefill is unaffected per session (970 → 958) since prompt batches serialise — `prompt_seconds_total` never exceeded 1.2 s/s. The concurrency line
+        itself saturates at the slot count, so *Sessions and deferred requests* adds `requests_deferred`, the red dashed backlog: llama.cpp parks a request
+        when `get_available_slot()` returns `nullptr` (`queue_tasks.defer(...)`) and exports the length of that parked queue. Over a week it was above 0 in
+        232 scrapes, 231 of them with `requests_processing` pinned at 2, peaking at 8 waiting. A deferred request has not started, so it burns wall clock
+        and contributes no busy seconds — per-session speed stays honest through a backlog while delivered thins out.
     *   **No single label names a model.** Swap presets carry `preset=`, `gufo-llm.service` carries only its unit and `llama-decision`
         carries neither, so every per-model query derives `model` with `label_replace` per branch and unions the three.
-    *   **Speed comes from the server's own gauges, never from a ratio of the counters.** `prompt_tokens_total` and
-        `prompt_seconds_total` (and the `tokens_predicted_*` pair) do not advance in the same scrape — +3889 prompt tokens were observed
-        with 0.19 busy-seconds, and +1109 decode tokens with 0.000 — so `rate(tokens) / rate(seconds)` is `+Inf` on ~87% of evaluation
-        points and peaks near 3×10⁵ tok/s. `llamacpp:prompt_tokens_seconds` and `llamacpp:predicted_tokens_seconds` are the per-request
-        PP/TG the server computes itself, available on every backend including the swap presets; they hold the last completed request
-        until the next one, so read them as latest measured speed rather than a live average.
+    *   **The speed gauges are now deliberately unused.** `prompt_tokens_seconds` / `predicted_tokens_seconds` hold the last completed request until
+        the next one arrives, so elcunhalo reported 52.8 tok/s on gufo-llm through a day in which it generated almost nothing, and presets that never
+        loaded reported nothing at all. The counter ratio they replace is sound but needs guarding: the token counter advances in scrapes the seconds
+        counter does not, so an unguarded `rate(tokens) / rate(seconds)` reads `+Inf` on ~1% of evaluation points over a week and its finite tail reaches
+        30194 tok/s for prefill against a 980 median. Writing it as `increase() / increase()` lets the guard read in seconds — prefill requires **10s of
+        prompt evaluation** inside the window (peak 26544 → 5936 tok/s over a week, median unmoved), decode needs no floor since generation already runs
+        long enough to average itself.
     *   **Ratio panels use a fixed window plus a volume floor, not `$__rate_interval`.** The prompt-cache hit rate moved to `[30m]` with a
         10k-token floor: at 15m the panel averaged 89% against a true 95.5% and showed seven spurious zeros, at 30m it averages 93% with
         three. Those three are real — each is 40k–175k computed prompt tokens with the cached counter unmoved, i.e. cold-cache prompts at
