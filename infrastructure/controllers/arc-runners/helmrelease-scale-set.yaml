@@ -14,7 +14,7 @@ spec:
     spec:
       chart: gha-runner-scale-set
       # pinned, never a semver range: Renovate's flux manager bumps this field and nothing else
-      version: 0.14.2
+      version: 0.15.1
       sourceRef:
         kind: HelmRepository
         name: actions-runner-controller-charts
