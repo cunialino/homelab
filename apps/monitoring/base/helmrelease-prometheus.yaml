@@ -12,7 +12,7 @@ spec:
     spec:
       chart: kube-prometheus-stack
       # pinned, never a semver range: Renovate's flux manager bumps this field and nothing else
-      version: 92.22.0
+      version: 93.1.1
       sourceRef:
         kind: HelmRepository
         name: prometheus-community
