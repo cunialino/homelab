@@ -13,7 +13,7 @@ spec:
   # every interval, but the commit behind a tag never moves, so changing what runs means editing the
   # tag below.
   ref:
-    tag: v0.9.3
+    tag: v0.10.0
   # The repository is the whole Rust workspace; only charts/ is ever read. Without this the artifact
   # source-controller stores and re-downloads is the entire source tree.
   ignore: |
