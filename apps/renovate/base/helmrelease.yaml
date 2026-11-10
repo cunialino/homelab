@@ -105,6 +105,15 @@ spec:
               "groupName": "oxicloud"
             },
             {
+              "description": "Keep the ARC controller chart, scale set chart and runner image in one PR",
+              "matchPackageNames": [
+                "gha-runner-scale-set",
+                "gha-runner-scale-set-controller",
+                "ghcr.io/actions/actions-runner"
+              ],
+              "groupName": "arc-runners"
+            },
+            {
               "matchDatasources": ["docker"],
               "matchPackageNames": ["custom.io/**"],
               "enabled": false
