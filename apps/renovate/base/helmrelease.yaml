@@ -114,6 +114,15 @@ spec:
               "groupName": "arc-runners"
             },
             {
+              "description": "Immich is tracked by the regex manager below; this is the lookup GHCR answers with 429 TOOMANYREQUESTS",
+              "matchManagers": ["kubernetes"],
+              "matchPackageNames": [
+                "ghcr.io/immich-app/immich-server",
+                "ghcr.io/immich-app/immich-machine-learning"
+              ],
+              "enabled": false
+            },
+            {
               "matchDatasources": ["docker"],
               "matchPackageNames": ["custom.io/**"],
               "enabled": false
@@ -145,6 +154,20 @@ spec:
               "datasourceTemplate": "docker",
               "versioningTemplate": "docker",
               "extractVersionTemplate": "^v?(?<version>.*)$"
+            },
+            {
+              "customType": "regex",
+              "description": "Update Immich from the immich-app/immich GitHub release",
+              "managerFilePatterns": [
+                "/^apps\\/immich\\/base\\/deployment-(server|ml)\\.ya?ml$/"
+              ],
+              "matchStrings": [
+                "image:\\s+ghcr\\.io\\/immich-app\\/(?<depName>immich-[a-z-]+):v(?<currentValue>[^\\s\"]+)"
+              ],
+              "datasourceTemplate": "github-releases",
+              "packageNameTemplate": "immich-app/immich",
+              "versioningTemplate": "semver",
+              "extractVersionTemplate": "^v(?<version>\\d+\\.\\d+\\.\\d+)$"
             }
           ]
         }
