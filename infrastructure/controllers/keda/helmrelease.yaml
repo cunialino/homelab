@@ -12,7 +12,7 @@ spec:
     spec:
       chart: keda
       # pinned, never a semver range: Renovate's flux manager bumps this field and nothing else
-      version: 2.21.0
+      version: 2.21.1
       sourceRef:
         kind: HelmRepository
         name: kedacore
