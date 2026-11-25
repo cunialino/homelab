@@ -23,6 +23,16 @@ spec:
   install:
     strategy:
       name: RetryOnFailure
+    crds: Create
   upgrade:
     strategy:
       name: RetryOnFailure
+    # Flux installs a chart's crds/ but does not replace them on upgrade (Skip is the default),
+    # so bumping this chart alone moves the controller Deployment and leaves the
+    # actions.github.com CRDs on the old schema. The scale sets have no crds/ directory of their
+    # own and gha-runner-scale-set >= 0.15 renders spec.listenerConfig out of its own default
+    # values, so an un-replaced CRD fails every scale-set apply with
+    # ".spec.listenerConfig: field not declared in schema" - and, because this Kustomization
+    # waits, wedges every other repo's CI that dependsOn arc-runners. CreateReplace is what keeps
+    # a Renovate bump of this chart self-contained; CreateReplace still never removes a CRD.
+    crds: CreateReplace
