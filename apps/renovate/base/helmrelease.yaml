@@ -114,6 +114,12 @@ spec:
               "groupName": "arc-runners"
             },
             {
+              "description": "Keep the Immich server and ML images in one PR: both come from one immich-app/immich release, and the regex manager rewrites their packageName to it",
+              "matchManagers": ["custom.regex"],
+              "matchPackageNames": ["immich-app/immich"],
+              "groupName": "immich"
+            },
+            {
               "description": "Immich is tracked by the regex manager below; this is the lookup GHCR answers with 429 TOOMANYREQUESTS",
               "matchManagers": ["kubernetes"],
               "matchPackageNames": [
